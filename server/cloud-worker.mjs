@@ -201,6 +201,7 @@ function spawnEmulator(config, meta) {
     '-no-window',
     '-no-audio',
     '-no-boot-anim',
+    '-no-snapshot',
     '-gpu', config.gpu,
   ];
   if (meta.profile === 'compact') args.push('-memory', '1536', '-cores', '1');
