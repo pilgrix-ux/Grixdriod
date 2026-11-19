@@ -1,0 +1,72 @@
+name: Android Emulator Smoke (Free macOS)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/android-emulator-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-emulator-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  boot-real-android:
+    # Standard macOS runners are free for public repositories.
+    # macOS uses Apple's Hypervisor.framework, so this job does not need Linux KVM.
+    runs-on: macos-15-intel
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out GRIXDroid
+        uses: actions/checkout@v4
+
+      - name: Boot Android and smoke-test system services
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          cores: 2
+          ram-size: 2048M
+          emulator-boot-timeout: 600
+          disable-animations: true
+          script: |
+            set -euo pipefail
+
+            echo "Android system properties:"
+            adb shell getprop ro.build.version.release
+            adb shell getprop ro.build.version.sdk
+
+            echo "Checking Android has completed boot:"
+            test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+
+            echo "Checking Package Manager:"
+            adb shell pm path com.android.settings
+
+            echo "Launching the real Android Settings application:"
+            adb shell am start -a android.settings.SETTINGS
+            sleep 3
+
+            echo "Capturing emulator evidence:"
+            adb exec-out screencap -p > "$RUNNER_TEMP/grixdroid-android-settings.png"
+            adb shell dumpsys activity activities > "$RUNNER_TEMP/grixdroid-android-activities.txt"
+
+            echo "Android emulator smoke test passed." | tee "$RUNNER_TEMP/grixdroid-android-smoke.txt"
+
+      - name: Save Android boot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grixdroid-android-smoke-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/grixdroid-android-settings.png
+            ${{ runner.temp }}/grixdroid-android-activities.txt
+            ${{ runner.temp }}/grixdroid-android-smoke.txt
+          if-no-files-found: warn
+          retention-days: 3
