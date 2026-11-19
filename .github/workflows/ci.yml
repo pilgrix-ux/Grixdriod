@@ -33,6 +33,8 @@ jobs:
           node-version: 22
       - name: Install frontend dependencies
         run: npm ci --no-audit --no-fund
+      - name: Validate ADB bridge JavaScript
+        run: node --check server/adb-bridge.mjs
       - name: Run Rust tests
         run: cargo test --locked --lib
       - name: Build WebAssembly and browser app
