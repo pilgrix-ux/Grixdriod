@@ -40,7 +40,7 @@ type CloudDevice = {
 
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
-const WHEP_BASE_URL = (import.meta.env.VITE_GRIXDROID_WHEP_BASE_URL || '').replace(/\\/+$/, '');
+const WHEP_BASE_URL = (import.meta.env.VITE_GRIXDROID_WHEP_BASE_URL || '').replace(/\/+$/, '');
 const configured = Boolean(SUPABASE_URL && SUPABASE_KEY);
 const authBase = SUPABASE_URL + '/auth/v1';
 const restBase = SUPABASE_URL + '/rest/v1';
