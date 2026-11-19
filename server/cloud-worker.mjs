@@ -737,6 +737,15 @@ export async function startCloudWorker(config = getWorkerConfig()) {
 
   const instances = new Map();
   await loadPersistedDevices(config, instances);
+  for (const meta of instances.values()) {
+    if (meta.state !== 'running') continue;
+    try {
+      await startWebRTCStream(config, meta);
+    } catch (streamError) {
+      await stopWebRTCStream(config, meta).catch(() => {});
+      await setStreamState(config, meta, 'error', streamError instanceof Error ? streamError.message : String(streamError)).catch(() => {});
+    }
+  }
   const server = http.createServer((req, res) => {
     void handleRequest(req, res, config, token, instances).catch((error) => {
       const status = Number(error.statusCode) || 500;
