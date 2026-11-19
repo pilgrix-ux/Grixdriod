@@ -559,7 +559,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
 
     const distance = Math.hypot(end.x - start.x, end.y - start.y);
     const durationMs = Math.max(80, Math.min(1500, Date.now() - start.at));
-    const command = distance > 0.02
+    const command: Record<string, string | number> = distance > 0.02
       ? { type: 'swipe', x: start.x, y: start.y, endX: end.x, endY: end.y, durationMs }
       : { type: 'tap', x: end.x, y: end.y };
 
