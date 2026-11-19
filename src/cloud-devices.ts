@@ -4,6 +4,7 @@ type AuthSession = {
   access_token: string;
   refresh_token: string;
   expires_at: number;
+  user_id: string;
 };
 
 type AuthResponse = {
@@ -166,6 +167,10 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   let viewerToken: string | null = null;
   let viewerDeviceId: string | null = null;
   let pointerStart: { x: number; y: number; at: number } | null = null;
+  let screenOrientation: 'portrait' | 'landscape' = 'portrait';
+  let nightModeEnabled = false;
+  const fontScales = [1, 1.15, 1.3];
+  let fontScaleIndex = 0;
   let authMode: 'signin' | 'signup' = 'signin';
   let authSession: AuthSession | null = null;
   let busy = false;
@@ -231,6 +236,9 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     viewerDeviceId = device.id;
     viewer.hidden = false;
     viewerTitle.textContent = device.name;
+    screenOrientation = 'portrait';
+    nightModeEnabled = false;
+    fontScaleIndex = 0;
     get<HTMLElement>('#grix-cloud-session-settings').hidden = false;
     get<HTMLElement>('#grix-cloud-device-controls').hidden = false;
     get<HTMLElement>('#grix-cloud-devtools').hidden = true;
@@ -246,12 +254,6 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     get<HTMLElement>('#grix-cloud-detail-state').textContent = device.state;
     get<HTMLElement>('#grix-cloud-detail-stream').textContent = device.stream_state;
     get<HTMLElement>('#grix-cloud-detail-storage').textContent = device.storage_state;
-    get<HTMLInputElement>('#grix-cloud-controls-toggle').checked = true;
-    get<HTMLInputElement>('#grix-cloud-devtools-toggle').checked = false;
-    get<HTMLElement>('#grix-cloud-device-controls').hidden = false;
-    get<HTMLElement>('#grix-cloud-devtools').hidden = true;
-    get<HTMLSelectElement>('#grix-cloud-device-scale').value = 'auto';
-    get<HTMLElement>('#grix-cloud-phone-wrap').style.setProperty('--device-scale', '1');
     viewerInputStatus.textContent = 'Tap or swipe the phone screen to control Android.';
     viewerStatus.textContent = 'Negotiating a secure WebRTC connection…';
     const token = await accessToken();
@@ -326,6 +328,38 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     viewerInputStatus.textContent = 'Input queued for the Android worker.';
   }
 
+  async function uploadAndInstallApk(file: File): Promise<void> {
+    if (!authSession || !viewerDeviceId) throw new Error('Open a signed-in Android device before installing an APK.');
+    if (!file.name.toLowerCase().endsWith('.apk')) throw new Error('Choose an Android .apk file.');
+    if (file.size <= 0 || file.size > 50 * 1024 * 1024) throw new Error('APK files must be between 1 byte and 50 MB.');
+    const token = await accessToken();
+    const objectPath = authSession.user_id + '/' + viewerDeviceId + '/' + crypto.randomUUID() + '.apk';
+    viewerInputStatus.textContent = 'Uploading APK securely to your private GRIXDroid storage…';
+    const encodedPath = objectPath.split('/').map(encodeURIComponent).join('/');
+    const upload = await fetch(SUPABASE_URL + '/storage/v1/object/grixdroid-apks/' + encodedPath, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: 'Bearer ' + token,
+        'Content-Type': file.type || 'application/vnd.android.package-archive',
+        'x-upsert': 'false',
+      },
+      body: file,
+      cache: 'no-store',
+    });
+    const uploadPayload = await readPayload(upload);
+    if (!upload.ok) throw new Error(responseMessage(uploadPayload));
+    await restRequest<unknown>('/cloud_device_actions', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        device_id: viewerDeviceId,
+        command: { type: 'install_apk', object_path: objectPath, filename: file.name },
+      }),
+    });
+    viewerInputStatus.textContent = 'APK uploaded. Install command queued for the Android worker.';
+  }
+
   function responseMessage(payload: unknown): string {
     if (typeof payload === 'string') return payload;
     if (payload && typeof payload === 'object') {
@@ -356,10 +390,21 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   function acceptSession(payload: AuthResponse): boolean {
     if (!payload.access_token || !payload.refresh_token) return false;
     const lifetime = Math.max(60, Number(payload.expires_in) || 3600);
+    let userId = payload.user?.id || '';
+    if (!userId) {
+      try {
+        const encoded = payload.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        userId = JSON.parse(atob(encoded)).sub || '';
+      } catch {
+        userId = '';
+      }
+    }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) return false;
     authSession = {
       access_token: payload.access_token,
       refresh_token: payload.refresh_token,
       expires_at: Number(payload.expires_at) || Math.floor(Date.now() / 1000) + lifetime,
+      user_id: userId,
     };
     return true;
   }
@@ -666,18 +711,78 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   viewerVideo.addEventListener('pointercancel', () => { pointerStart = null; });
   viewerVideo.addEventListener('lostpointercapture', () => { pointerStart = null; });
 
-  const navigationKeys: Array<[string, 'BACK' | 'HOME' | 'APP_SWITCH']> = [
-    ['#grix-cloud-action-back', 'BACK'],
-    ['#grix-cloud-action-home', 'HOME'],
-    ['#grix-cloud-action-recents', 'APP_SWITCH'],
-  ];
-  for (const [selector, key] of navigationKeys) {
-    get<HTMLButtonElement>(selector).addEventListener('click', () => {
-      void sendViewerCommand({ type: 'key', key }).catch((error) => {
-        viewerInputStatus.textContent = error instanceof Error ? error.message : 'Android navigation input could not be sent.';
-      });
+  get<HTMLButtonElement>('#grix-cloud-action-home').addEventListener('click', () => {
+    void sendViewerCommand({ type: 'key', key: 'HOME' }).catch((error) => {
+      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Home command failed.';
     });
-  }
+  });
+  get<HTMLButtonElement>('#grix-cloud-action-power').addEventListener('click', () => {
+    void sendViewerCommand({ type: 'key', key: 'POWER' }).catch((error) => {
+      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Power command failed.';
+    });
+  });
+  get<HTMLButtonElement>('#grix-cloud-action-rotate').addEventListener('click', () => {
+    screenOrientation = screenOrientation === 'portrait' ? 'landscape' : 'portrait';
+    void sendViewerCommand({ type: 'rotate', orientation: screenOrientation }).then(() => {
+      get<HTMLElement>('#grix-cloud-phone-wrap').style.setProperty('--device-ratio', screenOrientation === 'portrait' ? '9 / 16' : '16 / 9');
+      viewerInputStatus.textContent = 'Android display rotated to ' + screenOrientation + '.';
+    }).catch((error) => {
+      screenOrientation = screenOrientation === 'portrait' ? 'landscape' : 'portrait';
+      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Rotation failed.';
+    });
+  });
+  get<HTMLButtonElement>('#grix-cloud-action-edit').addEventListener('click', () => {
+    viewerTextInput.focus();
+    viewerInputStatus.textContent = 'Type into the field below the phone and press Send.';
+  });
+  get<HTMLButtonElement>('#grix-cloud-action-language').addEventListener('click', () => {
+    viewerInputStatus.textContent = 'Android language switching is not exposed by this emulator worker yet.';
+  });
+  get<HTMLButtonElement>('#grix-cloud-action-night').addEventListener('click', () => {
+    nightModeEnabled = !nightModeEnabled;
+    void sendViewerCommand({ type: 'night_mode', enabled: nightModeEnabled }).catch((error) => {
+      nightModeEnabled = !nightModeEnabled;
+      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Dark mode could not be changed.';
+    });
+  });
+  get<HTMLButtonElement>('#grix-cloud-action-font').addEventListener('click', () => {
+    fontScaleIndex = (fontScaleIndex + 1) % fontScales.length;
+    void sendViewerCommand({ type: 'font_scale', scale: fontScales[fontScaleIndex] }).then(() => {
+      viewerInputStatus.textContent = 'Android text size set to ' + Math.round(fontScales[fontScaleIndex] * 100) + '%.';
+    }).catch((error) => {
+      fontScaleIndex = (fontScaleIndex + fontScales.length - 1) % fontScales.length;
+      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Text size could not be changed.';
+    });
+  });
+  get<HTMLButtonElement>('#grix-cloud-action-fingerprint').addEventListener('click', () => {
+    void sendViewerCommand({ type: 'fingerprint' }).catch((error) => {
+      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Fingerprint simulation failed.';
+    });
+  });
+  get<HTMLButtonElement>('#grix-cloud-action-upload').addEventListener('click', () => {
+    get<HTMLInputElement>('#grix-cloud-apk-input').click();
+  });
+  get<HTMLInputElement>('#grix-cloud-apk-input').addEventListener('change', async (event) => {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      await uploadAndInstallApk(file);
+    } catch (error) {
+      viewerInputStatus.textContent = error instanceof Error ? error.message : 'APK installation request failed.';
+    }
+  });
+  get<HTMLButtonElement>('#grix-cloud-action-vibrate').disabled = true;
+  get<HTMLButtonElement>('#grix-cloud-action-vibrate').title = 'Vibration hardware is unavailable in this virtual device profile';
+  viewerVideo.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' || event.key === 'Backspace') {
+      event.preventDefault();
+      void sendViewerCommand({ type: 'key', key: 'BACK' }).catch((error) => {
+        viewerInputStatus.textContent = error instanceof Error ? error.message : 'Back command failed.';
+      });
+    }
+  });
 
   viewerTextForm.addEventListener('submit', (event) => {
     event.preventDefault();
