@@ -1,0 +1,18 @@
+# MediaMTX WebRTC gateway configuration.
+# Run server/mediamtx-auth.mjs on this host and terminate public HTTPS at a trusted reverse proxy.
+logLevel: info
+
+authMethod: http
+authHTTPAddress: http://127.0.0.1:8890/auth
+
+webrtc: yes
+webrtcAddress: 127.0.0.1:8889
+webrtcAllowOrigins:
+  - https://your-grixdroid-site.example
+webrtcLocalUDPAddress: :8189
+webrtcIPsFromInterfaces: true
+
+# If this host is behind NAT, configure the public IP/DNS name advertised to ICE clients:
+# webrtcIPsFromInterfaces: false
+# webrtcAdditionalHosts:
+#   - your-public-stream-host.example

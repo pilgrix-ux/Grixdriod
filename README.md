@@ -21,6 +21,36 @@ GRIXDroid is **not a complete Android operating system** and is not a general-pu
 
 The APK runner supports only a narrow subset of DEX instructions and framework calls. Treat this as a systems research prototype, not a replacement for the Android Emulator or a real Android device.
 
+## Cloud device manager foundation
+
+The Cloud Devices workspace and self-hosted Android worker agent now provide the first account-scoped control-plane and host-side runtime foundation:
+
+- Supabase Auth sign-up/sign-in for an individual account.
+- Per-account provisioning request history.
+- Owner-scoped cloud device and session inventory.
+- A database migration with Row Level Security and private worker/runtime metadata.
+- Persistent-volume metadata kept separate from browser-visible device records.
+- A worker agent that claims queued requests, boots individual Android Emulator AVDs, preserves their writable data directories, and exposes a loopback-only diagnostic API.
+
+The worker code and optional WHIP/WHEP streaming integration are now in the repository, but no worker host, MediaMTX gateway or dedicated GRIXDroid database has been configured. Until an operator installs the Android SDK and streaming tools, applies all three migrations, and starts the worker on a durable host, provisioning requests remain queued. This is not yet a managed public cloud phone service. See [Cloud device architecture](docs/CLOUD_DEVICE_ARCHITECTURE.md) before configuring a backend.
+
+To configure the workspace, copy `.env.example` to `.env.local`, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, and apply all three migrations in `supabase/migrations/` to a dedicated GRIXDroid Supabase project. Never expose a Supabase secret API key or service-role JWT to the browser. The worker sends the `sb_secret_...` key in the `apikey` header and the legacy `service_role` JWT separately in the `Authorization` header. Supabase projects may require enabling the `public` schema in Data API settings before the website can query these tables.
+
+## Self-hosted Android worker
+
+The cloud worker boots a genuine Android Emulator system image—not the browser-native ARM/Dalvik research runtime—for each queued device request. By default it uses Android 15 (API 35) with Google Play Store and Google Play services. It needs a persistent host with Android SDK Command-line Tools, Emulator, Platform Tools, the exact system image and durable storage. On boot it verifies Android system properties and the expected packages before reporting the device as ready.
+
+```bash
+cp .env.worker.example .env.worker
+# Edit .env.worker with the dedicated GRIXDroid Supabase URL, a server-only sb_secret API key,
+# a legacy service_role JWT for the worker role claim, stable worker UUID, Android SDK path
+# and persistent data directory.
+npm ci
+npm run device-worker
+```
+
+Install the image with `sdkmanager --licenses` and `sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis_playstore;x86_64"` before starting the worker. Google Play-enabled hosted sessions need a separate terms review; GRIXDroid does not redistribute Google packages. Apply all six Supabase migrations in order before starting the worker. The Appetize-style live workspace provides a framed Android screen, Show/Hide device controls, developer details, touch/swipe, Home/Power, rotation, dark mode, font sizing, emulator fingerprint input and screenshot capture. APK uploads use the private `grixdroid-apks` bucket (50 MB maximum) and the worker installs the uploaded package with `adb install -r`; APK bytes never go in the database command row. For optional WebRTC, configure the matching scrcpy server JAR, an FFmpeg build with the WHIP muxer, the MediaMTX host and the signed-in viewer endpoint; see [WebRTC streaming setup](docs/WEBRTC_STREAMING.md). For a Linux host without KVM, software CPU emulation is an explicit development-only option and is very slow; see [the worker setup guide](docs/CLOUD_DEVICE_ARCHITECTURE.md). The worker API defaults to loopback and is not directly exposed to website visitors.
+
 ## Real Android web integration
 
 The website now includes a **Real Android device** panel. It connects to an Android phone or an already-running Android Emulator through the private ADB bridge in `server/adb-bridge.mjs`.
@@ -40,7 +70,7 @@ This bridge controls an existing phone or emulator; it does not create a persist
 
 GRIXDroid includes an optional real-Android smoke test using a temporary GitHub-hosted macOS runner. macOS uses Apple's Hypervisor.framework, so this development workflow does not require renting a Linux KVM machine.
 
-Run it from **Actions → Android Emulator Smoke (Free macOS) → Run workflow**. It boots an Android API 35 virtual device using Google's `google_apis_playstore` system image, verifies that Play Store and Google Play services are installed, launches the Play Store UI without a personal account, and saves a short-lived screenshot/log artifact.
+Run it from **Actions → Android Emulator Smoke (Free macOS) → Run workflow**. It boots an Android API 35 virtual device using Google's `google_apis_playstore` system image, verifies Android Settings, Play Store and Google Play services, launches the Store UI without a personal account, then stops and restarts the same AVD to verify a value in Android's Settings database survives. It saves a short-lived evidence artifact.
 
 This is an automated CI test, **not** an always-on cloud phone or a public streaming service. Standard GitHub-hosted runners are free for public repositories; see [GitHub Actions billing](https://docs.github.com/en/actions/concepts/billing-and-usage). The distinction between the temporary test emulator, private ADB bridge and a future persistent device host is documented in [the free-first Android plan](docs/FREE_FIRST_ANDROID_PLAN.md).
 
@@ -78,6 +108,7 @@ The production build compiles the Rust crate to WebAssembly, then runs TypeScrip
 - src/android/: APK/AXML/DEX parsing and constrained Dalvik HLE runtime
 - src/lib.rs: WebAssembly exports
 - src/main.ts, src/style.css: browser UI and rendering
+- server/cloud-worker.mjs: persistent Android Emulator worker agent
 - docs/: implementation notes and current support boundaries
 
 ## Attribution

@@ -1,5 +1,6 @@
 import './style.css';
 import { mountAndroidDevicePanel } from './device-console';
+import { mountCloudDevicesPanel } from './cloud-devices';
 import init, {
   VirtualCPU,
   init_emulator,
@@ -187,6 +188,7 @@ app.innerHTML = `
 `;
 
 mountAndroidDevicePanel(app);
+mountCloudDevicesPanel(app);
 
 // ── Move the canvas into our wrapper ───────────────────────────────────
 const canvas = document.getElementById('screen') as HTMLCanvasElement;

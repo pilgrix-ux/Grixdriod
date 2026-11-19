@@ -9,7 +9,10 @@
     "build": "bash scripts/vercel-build.sh",
     "preview": "vite preview",
     "test": "cargo test --lib",
-    "device-bridge": "node server/adb-bridge.mjs"
+    "device-bridge": "node server/adb-bridge.mjs",
+    "device-worker": "node --env-file=.env.worker server/cloud-worker.mjs",
+    "test:worker": "node --test server/*.test.mjs",
+    "mediamtx-auth": "node --env-file=.env.mediamtx-auth server/mediamtx-auth.mjs"
   },
   "devDependencies": {
     "typescript": "~5.9.3",

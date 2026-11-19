@@ -3,9 +3,20 @@ name: Android Emulator Smoke (Free macOS)
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: ["**"]
     paths:
       - ".github/workflows/android-emulator-smoke.yml"
+      - "server/cloud-worker.mjs"
+      - "server/cloud-worker.android-smoke.mjs"
+      - "server/cloud-worker.test.mjs"
+      - ".env.worker.example"
+  pull_request:
+    paths:
+      - ".github/workflows/android-emulator-smoke.yml"
+      - "server/cloud-worker.mjs"
+      - "server/cloud-worker.android-smoke.mjs"
+      - "server/cloud-worker.test.mjs"
+      - ".env.worker.example"
 
 permissions:
   contents: read
@@ -25,6 +36,42 @@ jobs:
       - name: Check out GRIXDroid
         uses: actions/checkout@v4
 
+      - name: Ensure Android SDK command-line tools are installed
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          if [ -z "$SDK_ROOT" ]; then
+            echo "The runner did not expose ANDROID_SDK_ROOT or ANDROID_HOME."
+            exit 1
+          fi
+
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager -print -quit 2>/dev/null || true)"
+          fi
+          if [ -z "$SDKMANAGER" ]; then
+            echo "Could not find sdkmanager under $SDK_ROOT/cmdline-tools."
+            find "$SDK_ROOT" -maxdepth 5 -type f -name sdkmanager -print || true
+            exit 1
+          fi
+
+          "$SDKMANAGER" --install "cmdline-tools;latest"
+          AVDMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/avdmanager"
+          if [ ! -x "$AVDMANAGER" ]; then
+            echo "Android SDK package installation completed, but avdmanager is still missing."
+            find "$SDK_ROOT/cmdline-tools" -maxdepth 5 -type f -name avdmanager -print || true
+            exit 1
+          fi
+          echo "AVDMANAGER_PATH=$AVDMANAGER" >> "$GITHUB_ENV"
+          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+
+      - name: Validate worker scripts before booting Android
+        run: |
+          node --check server/cloud-worker.mjs
+          node --check server/cloud-worker.android-smoke.mjs
+          node --test server/cloud-worker.test.mjs
+
       - name: Boot Android and smoke-test system services
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -32,6 +79,7 @@ jobs:
           target: google_apis_playstore
           arch: x86_64
           profile: pixel_7
+          avd-name: grixdroid-real-android
           cores: 2
           ram-size: 2048M
           emulator-boot-timeout: 900
@@ -57,11 +105,8 @@ jobs:
             adb shell monkey -p com.android.vending 1
             sleep 5
 
-            echo "Capturing Play Store and Android evidence:"
-            adb exec-out screencap -p > "$RUNNER_TEMP/grixdroid-playstore.png"
-            adb shell dumpsys activity activities > "$RUNNER_TEMP/grixdroid-android-activities.txt"
-
-            echo "Android + Google Play Store package smoke test passed." | tee "$RUNNER_TEMP/grixdroid-android-smoke.txt"
+            echo "Testing the actual GRIXDroid worker against this Android AVD:"
+            node server/cloud-worker.android-smoke.mjs
 
       - name: Save Android boot evidence
         if: always()
@@ -72,5 +117,6 @@ jobs:
             ${{ runner.temp }}/grixdroid-playstore.png
             ${{ runner.temp }}/grixdroid-android-activities.txt
             ${{ runner.temp }}/grixdroid-android-smoke.txt
+            ${{ runner.temp }}/grixdroid-android-fingerprint.txt
           if-no-files-found: warn
           retention-days: 3

@@ -19,13 +19,14 @@ The workflow at `.github/workflows/android-emulator-smoke.yml`:
 2. Waits for Android to finish booting.
 3. Verifies that Android Settings, Google Play Store (`com.android.vending`), and Google Play services (`com.google.android.gms`) are installed.
 4. Launches the Play Store app through ADB without adding any personal Google account to the CI runner.
-5. Saves a screenshot and activity dump as a short-lived workflow artifact.
-6. Shuts down the runner and emulator when the job finishes.
+5. Writes a marker to Android's Settings database, shuts down the emulator, restarts the same AVD without wiping its data, and verifies the marker and Play Store packages remain.
+6. Saves a screenshot, build fingerprint and activity dump as a short-lived workflow artifact.
+7. Shuts down the runner and emulator when the job finishes.
 
 Run it from GitHub:
 **Actions → Android Emulator Smoke (Free macOS) → Run workflow**.
 
-The first run is also triggered when this workflow file is added or changed on `main`.
+The workflow runs automatically for relevant pull requests and pushes to any branch, as well as through manual dispatch. It is therefore part of the feature-branch verification, not only a main-branch test.
 
 ## Google Play boundary
 
@@ -54,7 +55,7 @@ Develop the real Android path in increments:
 ### Milestone A — Android boot verification
 
 - [x] Add an automated real-Android boot smoke workflow.
-- [ ] Run the workflow and confirm the Android boot artifact is produced.
+- [ ] Confirm the Android + Play Store + data-persistence workflow passes and uploads its evidence artifact.
 - [ ] Add an Android test APK and verify install, launch, and uninstall with ADB.
 
 ### Milestone B — private web device integration
@@ -83,3 +84,17 @@ Before opening public sessions, implement per-user authorization, isolation, quo
 - No paid KVM host is required for the current development and CI stage.
 - Do not add paid APIs, paid emulator services, or secret-dependent deployment steps without an explicit decision.
 - Keep the public browser demo honest about the difference between the experimental ARM Lab and a real Android virtual device.
+
+## Cloud device manager foundation (November 19, 2026)
+
+- [x] Add account sign-up/sign-in and a Cloud Devices workspace to the website.
+- [x] Add owner-scoped device inventory, session metadata and provisioning requests.
+- [x] Add RLS policies that prevent browser users from changing runtime state or reading another user's devices.
+- [x] Keep worker identifiers, runtime handles and persistent-volume references in a private schema.
+- [x] Add a build-and-test workflow for the browser/Wasm application and Rust library.
+- [ ] Configure a dedicated GRIXDroid Supabase project and apply the migration.
+- [ ] Implement the authenticated worker claim/heartbeat API.
+- [ ] Enroll a persistent Android worker and verify that a device volume survives stop/start.
+- [ ] Add a short-lived, authenticated WebRTC streaming gateway and network isolation.
+
+The Cloud Devices page records account ownership and provisioning intent. Until the worker and control-plane API are connected, requests remain queued; the page does not claim to launch an Android device.
