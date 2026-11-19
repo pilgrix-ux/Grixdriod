@@ -19,13 +19,14 @@ The workflow at `.github/workflows/android-emulator-smoke.yml`:
 2. Waits for Android to finish booting.
 3. Verifies that Android Settings, Google Play Store (`com.android.vending`), and Google Play services (`com.google.android.gms`) are installed.
 4. Launches the Play Store app through ADB without adding any personal Google account to the CI runner.
-5. Saves a screenshot and activity dump as a short-lived workflow artifact.
-6. Shuts down the runner and emulator when the job finishes.
+5. Writes a marker to Android's Settings database, shuts down the emulator, restarts the same AVD without wiping its data, and verifies the marker and Play Store packages remain.
+6. Saves a screenshot, build fingerprint and activity dump as a short-lived workflow artifact.
+7. Shuts down the runner and emulator when the job finishes.
 
 Run it from GitHub:
 **Actions → Android Emulator Smoke (Free macOS) → Run workflow**.
 
-The first run is also triggered when this workflow file is added or changed on `main`.
+The workflow runs automatically for relevant pull requests and pushes to any branch, as well as through manual dispatch. It is therefore part of the feature-branch verification, not only a main-branch test.
 
 ## Google Play boundary
 
@@ -54,7 +55,7 @@ Develop the real Android path in increments:
 ### Milestone A — Android boot verification
 
 - [x] Add an automated real-Android boot smoke workflow.
-- [ ] Run the workflow and confirm the Android boot artifact is produced.
+- [ ] Confirm the Android + Play Store + data-persistence workflow passes and uploads its evidence artifact.
 - [ ] Add an Android test APK and verify install, launch, and uninstall with ADB.
 
 ### Milestone B — private web device integration
