@@ -81,6 +81,15 @@ test('finds avdmanager in versioned Android SDK command-line tools directories',
   }
 });
 
+test('falls back to avdmanager on PATH when the SDK folder has no command-line tools', () => {
+  const sdkRoot = mkdtempSync(path.join(os.tmpdir(), 'grixdroid-sdk-empty-'));
+  try {
+    assert.equal(resolveAvdManagerPath(sdkRoot), 'avdmanager');
+  } finally {
+    rmSync(sdkRoot, { recursive: true, force: true });
+  }
+});
+
 test('prefers the SDK latest alias and honors an explicit avdmanager override', () => {
   const sdkRoot = mkdtempSync(path.join(os.tmpdir(), 'grixdroid-sdk-latest-'));
   try {
