@@ -3,7 +3,7 @@ import http from 'node:http';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
@@ -47,6 +47,20 @@ export function parseResolution(raw) {
   return match ? { width: Number(match[1]), height: Number(match[2]) } : { width: 0, height: 0 };
 }
 
+export function parseSystemImagePackage(raw) {
+  const match = String(raw || '').match(/^system-images;android-(\d+);([a-z0-9_]+);([a-z0-9_]+)$/i);
+  if (!match) {
+    throw new Error('GRIXDROID_SYSTEM_IMAGE must look like system-images;android-35;google_apis_playstore;x86_64.');
+  }
+  return {
+    apiLevel: Number(match[1]),
+    target: match[2],
+    abi: match[3],
+    relativePath: path.join('system-images', 'android-' + match[1], match[2], match[3]),
+    hasPlayStore: match[2].toLowerCase().includes('playstore'),
+  };
+}
+
 export function getWorkerConfig(env = process.env) {
   const sdkRoot = env.ANDROID_SDK_ROOT || env.ANDROID_HOME || '';
   const root = path.resolve(env.GRIXDROID_DATA_ROOT || './.grixdroid-worker-data');
@@ -54,7 +68,7 @@ export function getWorkerConfig(env = process.env) {
   const accel = env.GRIXDROID_ACCEL || 'auto';
   if (!['auto', 'on', 'off'].includes(accel)) throw new Error('GRIXDROID_ACCEL must be auto, on or off.');
   const capacity = Math.max(1, Math.min(4, Number(env.GRIXDROID_MAX_DEVICES) || 1));
-  const systemImage = env.GRIXDROID_SYSTEM_IMAGE || 'system-images;android-35;google_apis;x86_64';
+  const systemImage = env.GRIXDROID_SYSTEM_IMAGE || 'system-images;android-35;google_apis_playstore;x86_64';
   return {
     sdkRoot,
     dataRoot: root,
@@ -235,6 +249,34 @@ async function adb(config, serial, args, options = {}) {
   return run(config.adb, ['-s', serial, ...args], options);
 }
 
+async function inspectAndroidSystem(config, serial) {
+  const readProperty = async (name) => String((await adb(config, serial, ['shell', 'getprop', name])).stdout).trim();
+  const androidRelease = await readProperty('ro.build.version.release');
+  const androidSdk = Number.parseInt(await readProperty('ro.build.version.sdk'), 10);
+  const buildFingerprint = await readProperty('ro.build.fingerprint');
+  const deviceModel = await readProperty('ro.product.model');
+  const settings = String((await adb(config, serial, ['shell', 'pm', 'path', 'com.android.settings'])).stdout).trim();
+  if (!androidRelease || !Number.isInteger(androidSdk) || !buildFingerprint || !settings) {
+    throw new Error('The booted image did not pass Android framework verification (build properties or Settings package missing).');
+  }
+
+  const image = parseSystemImagePackage(config.systemImage);
+  const playStore = String((await adb(config, serial, ['shell', 'pm', 'path', 'com.android.vending'])).stdout).trim();
+  const playServices = String((await adb(config, serial, ['shell', 'pm', 'path', 'com.google.android.gms'])).stdout).trim();
+  if (image.hasPlayStore && (!playStore || !playServices)) {
+    throw new Error('The configured Play Store Android image booted without the Play Store and Google Play services packages.');
+  }
+
+  return {
+    androidRelease,
+    androidSdk,
+    buildFingerprint,
+    deviceModel,
+    hasPlayStore: Boolean(playStore),
+    hasGooglePlayServices: Boolean(playServices),
+  };
+}
+
 async function waitForBoot(config, meta) {
   const deadline = Date.now() + config.bootTimeoutMs;
   await run(config.adb, ['-s', meta.serial, 'wait-for-device'], { timeout: Math.min(config.bootTimeoutMs, 120000) });
@@ -242,9 +284,9 @@ async function waitForBoot(config, meta) {
     if (meta.process && meta.process.exitCode !== null) throw new Error(meta.lastError || 'Emulator exited before Android boot completed.');
     const result = await adb(config, meta.serial, ['shell', 'getprop', 'sys.boot_completed']).catch(() => ({ stdout: '' }));
     if (String(result.stdout).trim() === '1') {
-      const release = await adb(config, meta.serial, ['shell', 'getprop', 'ro.build.version.release']).catch(() => ({ stdout: '' }));
+      const system = await inspectAndroidSystem(config, meta.serial);
       const size = await adb(config, meta.serial, ['shell', 'wm', 'size']).catch(() => ({ stdout: '' }));
-      return { androidRelease: String(release.stdout).trim(), resolution: parseResolution(size.stdout) };
+      return { ...system, resolution: parseResolution(size.stdout) };
     }
     await delay(3000);
   }
@@ -257,10 +299,35 @@ async function listAvds(config, avdHome) {
   return String(result.stdout).split(/\r?\n/).map((v) => v.trim()).filter(Boolean);
 }
 
+async function assertSystemImageInstalled(config) {
+  const image = parseSystemImagePackage(config.systemImage);
+  const imageDir = path.join(config.sdkRoot, image.relativePath);
+  const entries = await readdir(imageDir).catch(() => null);
+  if (!entries || (!entries.includes('source.properties') && !entries.includes('package.xml'))) {
+    throw new Error('Android system image is not installed: ' + config.systemImage + '. Install it with sdkmanager before starting the worker.');
+  }
+  return image;
+}
+
+async function verifyAvdImage(config, meta) {
+  const image = parseSystemImagePackage(config.systemImage);
+  const configFile = path.join(meta.avdHome, meta.avdName + '.avd', 'config.ini');
+  const avdConfig = await readFile(configFile, 'utf8');
+  const match = avdConfig.match(/^image\.sysdir\.1=(.+)$/m);
+  const actual = match ? match[1].trim().replace(/\\/g, '/').replace(/\/+$/, '') : '';
+  const expected = image.relativePath.replace(/\\/g, '/');
+  if (!actual || !actual.endsWith(expected)) {
+    throw new Error('Existing AVD ' + meta.avdName + ' was created from a different Android system image. Back up its data and provision a new device to change image targets.');
+  }
+}
+
 async function ensureAvd(config, meta) {
   await mkdir(meta.avdHome, { recursive: true });
   const existing = await listAvds(config, meta.avdHome);
-  if (existing.includes(meta.avdName)) return;
+  if (existing.includes(meta.avdName)) {
+    await verifyAvdImage(config, meta);
+    return;
+  }
   const env = { ...process.env, ANDROID_AVD_HOME: meta.avdHome, ANDROID_SDK_ROOT: config.sdkRoot, ANDROID_HOME: config.sdkRoot };
   const args = ['create', 'avd', '--name', meta.avdName, '--package', config.systemImage, '--device', 'pixel_7', '--force'];
   const child = spawn(config.avdManager, args, { env, stdio: ['pipe', 'ignore', 'pipe'], windowsHide: true });
@@ -271,6 +338,7 @@ async function ensureAvd(config, meta) {
     child.once('error', reject);
     child.once('close', (code) => code === 0 ? resolve(true) : reject(new Error(stderr || 'avdmanager failed with exit code ' + code)));
   });
+  await verifyAvdImage(config, meta);
   return outcome;
 }
 
@@ -391,6 +459,11 @@ async function persistMeta(meta) {
     serial: meta.serial,
     state: meta.state,
     androidRelease: meta.androidRelease || null,
+    androidSdk: meta.androidSdk || null,
+    buildFingerprint: meta.buildFingerprint || null,
+    deviceModel: meta.deviceModel || null,
+    hasPlayStore: Boolean(meta.hasPlayStore),
+    hasGooglePlayServices: Boolean(meta.hasGooglePlayServices),
     resolution: meta.resolution || { width: 0, height: 0 },
   };
   await writeFile(temp, JSON.stringify(disk, null, 2), { mode: 0o600 });
@@ -398,12 +471,12 @@ async function persistMeta(meta) {
 }
 
 async function startExisting(config, meta) {
+  await verifyAvdImage(config, meta);
   if (meta.process && meta.process.exitCode === null) return;
   const state = await run(config.adb, ['-s', meta.serial, 'get-state'], { timeout: 4000 }).catch(() => null);
   if (state && String(state.stdout).trim() === 'device') {
     const boot = await waitForBoot(config, { ...meta, process: null });
-    meta.androidRelease = boot.androidRelease;
-    meta.resolution = boot.resolution;
+    Object.assign(meta, boot);
     meta.state = 'running';
     await callRpc(config, 'grixdroid_set_device_state', {
       p_device_id: meta.cloudDeviceId,
@@ -417,8 +490,7 @@ async function startExisting(config, meta) {
   }
   spawnEmulator(config, meta);
   const boot = await waitForBoot(config, meta);
-  meta.androidRelease = boot.androidRelease;
-  meta.resolution = boot.resolution;
+  Object.assign(meta, boot);
   meta.state = 'running';
   await persistMeta(meta);
   await callRpc(config, 'grixdroid_set_device_state', {
@@ -494,6 +566,10 @@ function publicDevice(meta) {
     profile: meta.profile,
     state: meta.state,
     androidRelease: meta.androidRelease || null,
+    androidSdk: meta.androidSdk || null,
+    deviceModel: meta.deviceModel || null,
+    hasPlayStore: Boolean(meta.hasPlayStore),
+    hasGooglePlayServices: Boolean(meta.hasGooglePlayServices),
     resolution: meta.resolution || { width: 0, height: 0 },
     storage: 'persistent-volume',
     streamState: meta.streamState || 'disabled',
@@ -521,9 +597,8 @@ async function loadPersistedDevices(config, instances) {
       if (active && String(active.stdout).trim() === 'device') {
         const boot = await waitForBoot(config, meta).catch(() => null);
         if (boot) {
+          Object.assign(meta, boot);
           meta.state = 'running';
-          meta.androidRelease = boot.androidRelease;
-          meta.resolution = boot.resolution;
         }
       } else {
         await callRpc(config, 'grixdroid_set_device_state', {
@@ -581,8 +656,7 @@ async function bootClaim(config, claim, instances) {
     await ensureAvd(config, meta);
     spawnEmulator(config, meta);
     const boot = await waitForBoot(config, meta);
-    meta.androidRelease = boot.androidRelease;
-    meta.resolution = boot.resolution;
+    Object.assign(meta, boot);
     const deviceId = await callRpc(config, 'grixdroid_complete_device_request', {
       p_request_id: requestId,
       p_worker_id: config.workerId,
@@ -724,6 +798,7 @@ export async function startCloudWorker(config = getWorkerConfig()) {
     if (!String(help.stdout).toLowerCase().includes('authorization')) throw new Error('The installed FFmpeg build must include the WHIP muxer with its authorization option.');
   }
 
+  const image = await assertSystemImageInstalled(config);
   await run(config.emulator, ['-version']);
   await run(config.avdManager, ['--version']).catch(() => {
     throw new Error('avdmanager was not found. Install Android SDK Command-line Tools.');
@@ -761,6 +836,7 @@ export async function startCloudWorker(config = getWorkerConfig()) {
   if (!config.apiToken) process.stdout.write('[worker] Local API bearer token (shown once): ' + token + '\n');
   process.stdout.write('[worker] Data root: ' + config.dataRoot + '\n');
   process.stdout.write('[worker] Android image: ' + config.systemImage + '\n');
+  process.stdout.write('[worker] Android API level: ' + image.apiLevel + ' | Play Store image: ' + (image.hasPlayStore ? 'required' : 'not included') + '\n');
   process.stdout.write('[worker] Acceleration: ' + config.accel + ' | GPU: ' + config.gpu + '\n');
 
   let stopping = false;
