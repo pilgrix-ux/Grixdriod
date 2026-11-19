@@ -412,6 +412,7 @@ async function startExisting(config, meta) {
       p_android_release: meta.androidRelease,
       p_storage_bytes: null,
     });
+    await startWebRTCStream(config, meta);
     return;
   }
   spawnEmulator(config, meta);
@@ -427,6 +428,7 @@ async function startExisting(config, meta) {
     p_android_release: meta.androidRelease,
     p_storage_bytes: null,
   });
+  await startWebRTCStream(config, meta);
 }
 
 async function stopDevice(config, meta) {
@@ -599,6 +601,7 @@ async function bootClaim(config, claim, instances) {
     try {
       await startWebRTCStream(config, meta);
     } catch (streamError) {
+      await stopWebRTCStream(config, meta).catch(() => {});
       await setStreamState(config, meta, 'error', streamError instanceof Error ? streamError.message : String(streamError)).catch(() => {});
       process.stderr.write('[worker] WebRTC publisher failed for ' + meta.cloudDeviceId + ': ' + (streamError instanceof Error ? streamError.message : String(streamError)) + '\n');
     }
