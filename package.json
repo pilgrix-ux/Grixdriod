@@ -9,7 +9,9 @@
     "build": "npm run build:wasm && tsc && vite build",
     "preview": "vite preview",
     "test": "cargo test --lib",
-    "device-bridge": "node server/adb-bridge.mjs"
+    "device-bridge": "node server/adb-bridge.mjs",
+    "device-worker": "node server/cloud-worker.mjs",
+    "test:worker": "node --test server/*.test.mjs"
   },
   "devDependencies": {
     "typescript": "~5.9.3",
