@@ -58,7 +58,7 @@ A future worker should:
 6. Expose a short-lived session through an authenticated streaming gateway.
 7. On stop, checkpoint state, detach the volume and release worker capacity without deleting customer data.
 
-The initial worker target should be an AOSP Android image without bundled Google proprietary applications. Play Store-enabled images require a separately reviewed and authorized distribution/hosting approach; the existing CI smoke test does not grant rights to redistribute Google Play or Google Play services.
+The worker defaults to Google's official Android 15 (API 35) `google_apis_playstore` Emulator system image. This is a genuine Android system image with the Android framework/userspace plus the Play Store and Google Play services; it is not the browser-based Dalvik HLE experiment. The worker checks the Android build fingerprint, SDK level, Settings package, and (for this target) Play Store and Play services packages before marking a device ready. Operators may explicitly choose `google_apis` or an AOSP image instead, but those targets do not promise the Play Store. Use of Google Play-enabled images for a public hosted service needs a separate review of Google's applicable terms; GRIXDroid does not copy or redistribute Google proprietary packages.
 
 ## Configuration
 
@@ -83,7 +83,7 @@ The worker:
 - Registers a heartbeat and capability record in the private worker registry.
 - Claims one queued request at a time using an atomic database function and a renewable 10-minute lease.
 - Creates a distinct AVD home directory for each request under `GRIXDROID_DATA_ROOT/devices/<request-id>/avd-home`.
-- Boots the selected Android system image, waits for `sys.boot_completed`, then records the device and private runtime/volume reference.
+- Boots the selected official Android Emulator system image, waits for `sys.boot_completed`, verifies Android framework/build properties and expected Google Play packages, then records the device and private runtime/volume reference.
 - Leaves the AVD data directory in place when stopped and can start the same AVD again.
 - Exposes a loopback-only development API for health, device inventory, screenshots, tap/swipe, navigation keys, text entry, start and stop.
 
@@ -109,7 +109,7 @@ Example SDK components:
 
 ```bash
 sdkmanager --licenses
-sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64"
+sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis_playstore;x86_64"
 ```
 
 Then configure the private worker:
@@ -142,7 +142,7 @@ GRIXDROID_MAX_DEVICES=1
 
 This mode is very slow and is for development experiments, not a practical multi-user production host. Hardware-accelerated Android Emulator instances use the host's supported virtualization facility (KVM on Linux, Hypervisor.Framework on macOS, or WHPX on Windows). See the [Android Emulator command-line options](https://developer.android.com/studio/run/emulator-commandline) and [acceleration guide](https://developer.android.com/studio/run/emulator-acceleration).
 
-The default system image is `google_apis`, not a Play Store image. A worker can be configured with an official Play Store-enabled image only after the operator installs it through the Android SDK and has reviewed the applicable Google terms. GRIXDroid does not bundle or redistribute Google Play or Play services.
+The default worker image is `system-images;android-35;google_apis_playstore;x86_64`. The worker refuses to start if that exact SDK package is missing, and it refuses to label a boot successful unless Android's system properties and Settings package are present. For a Play Store target it also verifies `com.android.vending` and `com.google.android.gms`. To use a non-Play-Store build, set `GRIXDROID_SYSTEM_IMAGE` to the exact SDK package and install it first. Existing AVDs are checked against their configured image; changing image targets requires a new device rather than silently reusing an incompatible data disk. GRIXDroid does not bundle or redistribute Google Play or Play services.
 
 ### Worker API
 
@@ -161,7 +161,7 @@ This API is intended for host-local development and diagnostics. It is not route
 
 ### Persistence and operational limits
 
-The worker stores the AVD home directory and its writable Android data image below `GRIXDROID_DATA_ROOT`. That root must be backed by durable disk (or a persistent host volume if containerized). Do not put it in `/tmp`, a GitHub Actions workspace, or an ephemeral deployment filesystem. Do not run `-wipe-data` against a customer AVD. Back up the data root before changing Android Emulator or system-image versions.
+The worker stores the AVD home directory and its writable Android data image below `GRIXDROID_DATA_ROOT`. That root must be backed by durable disk (or a persistent host volume if containerized). Do not put it in `/tmp`, a GitHub Actions workspace, or an ephemeral deployment filesystem. The worker does not pass `-wipe-data` when starting a customer AVD. Back up the data root before changing Android Emulator or system-image versions. The Android CI smoke test writes a value to Android's Settings database, stops and restarts the same AVD without wiping it, and checks that the value and Play Store packages remain present.
 
 The worker is currently a single-host development provider. The WHIP/WHEP integration is optional and requires a separately operated MediaMTX gateway, FFmpeg WHIP support, and a version-matched scrcpy server. It does not yet provide NAT/egress isolation, per-user bandwidth quotas, snapshot/restore across different hosts, APK upload endpoint or multi-host rescheduler. A cloud device can be booted only when this process runs on a host with the required Android SDK image and durable storage.
 
