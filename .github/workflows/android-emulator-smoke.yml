@@ -34,7 +34,7 @@ jobs:
           profile: pixel_7
           cores: 2
           ram-size: 2048M
-          emulator-boot-timeout: 600
+          emulator-boot-timeout: 900
           disable-animations: true
           script: |
             set -euo pipefail
