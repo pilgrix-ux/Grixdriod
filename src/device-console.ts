@@ -4,6 +4,8 @@ type DeviceInfo = {
   androidVersion: string;
   sdk: string;
   resolution: { width: number; height: number };
+  hasPlayStore: boolean;
+  hasGooglePlayServices: boolean;
 };
 
 type DeviceSession = { id: string; status: string; device: DeviceInfo; expiresAt: string };
@@ -21,7 +23,7 @@ export function mountAndroidDevicePanel(app: HTMLElement): void {
     '<div class="device-screen-frame" id="device-screen-frame"><img id="device-screen-image" alt="Live screen from the connected Android device" draggable="false"><div class="device-screen-placeholder" id="device-screen-placeholder"><div class="device-phone-glyph">▯</div><strong>Your Android screen appears here</strong><span>Connect a device to start screen mirroring.</span></div></div>' +
     '<div class="device-nav-controls"><button type="button" data-device-key="BACK" disabled>‹ <span>Back</span></button><button type="button" data-device-key="HOME" disabled>○ <span>Home</span></button><button type="button" data-device-key="APP_SWITCH" disabled>▢ <span>Recent</span></button><button type="button" id="device-refresh-screen" disabled>↻ <span>Refresh</span></button></div></div>' +
     '<aside class="device-tools"><div class="device-tool-card"><h3>Install an APK</h3><p>Install an APK directly on the connected Android device using ADB.</p><input id="device-apk-file" type="file" accept=".apk,application/vnd.android.package-archive" hidden><button id="device-select-apk" class="bridge-button primary full" type="button" disabled>Select APK</button><div class="device-upload-progress" id="device-upload-progress"></div></div>' +
-    '<div class="device-tool-card"><h3>Launch an app</h3><p>Choose an installed third-party package on the device.</p><select id="device-packages" disabled><option value="">Connect a device first</option></select><button id="device-launch-app" class="bridge-button secondary full" type="button" disabled>Launch selected app</button><button id="device-refresh-packages" class="device-text-button" type="button" disabled>Refresh installed apps</button></div>' +
+    '<div class="device-tool-card"><h3>Launch an app</h3><p>Choose an installed third-party package on the device.</p><select id="device-packages" disabled><option value="">Connect a device first</option></select><button id="device-launch-app" class="bridge-button secondary full" type="button" disabled>Launch selected app</button><button id="device-open-play-store" class="bridge-button secondary full" type="button" disabled>Open Google Play Store</button><button id="device-refresh-packages" class="device-text-button" type="button" disabled>Refresh installed apps</button></div>' +
     '<div class="device-tool-card"><h3>Type on device</h3><form id="device-text-form" class="device-type-form"><input id="device-text-input" type="text" maxlength="120" placeholder="Type text on Android…" autocomplete="off" disabled><button class="bridge-button secondary" type="submit" disabled id="device-send-text">Send</button></form><small>For passwords and account secrets, type directly into the device.</small></div>' +
     '<div class="device-tool-card"><div class="device-logs-heading"><h3>Android logcat</h3><button id="device-refresh-logs" class="device-text-button" type="button" disabled>Refresh</button></div><pre id="device-log-output">Logs will appear after connecting.</pre></div></aside></div>' +
     '<div class="device-integration-note"><strong>What this connection does</strong><span>The bridge controls an Android device that already exists on the bridge host. A phone with Google Play keeps its own Play Store and Google account. This is a private development bridge, not a hosted multi-user cloud phone service.</span></div>';
@@ -106,6 +108,7 @@ export function mountAndroidDevicePanel(app: HTMLElement): void {
     get<HTMLButtonElement>('#device-select-apk').disabled = !connected;
     packagesSelect.disabled = !connected;
     get<HTMLButtonElement>('#device-launch-app').disabled = !connected;
+    get<HTMLButtonElement>('#device-open-play-store').disabled = !connected || !session?.device.hasPlayStore;
     get<HTMLButtonElement>('#device-refresh-packages').disabled = !connected;
     get<HTMLInputElement>('#device-text-input').disabled = !connected;
     get<HTMLButtonElement>('#device-send-text').disabled = !connected;
@@ -189,7 +192,7 @@ export function mountAndroidDevicePanel(app: HTMLElement): void {
       });
       session = created;
       get<HTMLElement>('#device-name').textContent = selected.model || 'Android device';
-      get<HTMLElement>('#device-meta').textContent = 'Android ' + selected.androidVersion + ' · API ' + selected.sdk + ' · ' + selected.resolution.width + '×' + selected.resolution.height;
+      get<HTMLElement>('#device-meta').textContent = 'Android ' + selected.androidVersion + ' · API ' + selected.sdk + ' · ' + selected.resolution.width + '×' + selected.resolution.height + (selected.hasPlayStore ? ' · Play Store ready' : ' · Play Store not detected');
       setConnected(true);
       setMessage('Connected to ' + (selected.model || 'Android device') + '. ADB: ' + health.adb + '.', 'success');
       void requestScreenshot();
@@ -287,6 +290,21 @@ export function mountAndroidDevicePanel(app: HTMLElement): void {
       setMessage(error instanceof Error ? error.message : 'APK installation failed.', 'error');
     } finally {
       apkInput.value = '';
+    }
+  });
+
+  get<HTMLButtonElement>('#device-open-play-store').addEventListener('click', async () => {
+    if (!session?.device.hasPlayStore) return;
+    try {
+      const result = await api<{ message: string }>('/sessions/' + encodeURIComponent(session.id) + '/launch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ packageName: 'com.android.vending' }),
+      });
+      setMessage(result.message, 'success');
+      void requestScreenshot();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not open Google Play Store.', 'error');
     }
   });
 
