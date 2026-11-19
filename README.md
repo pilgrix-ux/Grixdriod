@@ -17,7 +17,7 @@ GRIXDroid explores running selected Android/Dalvik workloads locally in a browse
 
 ## Important limitations
 
-GRIXDroid is **not a complete Android operating system** and is not a general-purpose APK emulator. It does not provide full Android userspace, ART, zygote, Binder compatibility, SurfaceFlinger, Google Play Services, multidex support, or general JNI/native-library execution. Most ordinary Play Store APKs will not run.
+GRIXDroid is **not a complete Android operating system** and is not a general-purpose APK emulator. It does not provide full Android userspace, ART, zygote, Binder compatibility, SurfaceFlinger, multidex support, or general JNI/native-library execution. Most ordinary Play Store APKs will not run in the browser-native experimental HLE runtime. A separate temporary CI workflow now boots the official Google Play-enabled Android Emulator image and checks that Play Store and Google Play services are present; that CI device is not yet connected to the public website.
 
 The APK runner supports only a narrow subset of DEX instructions and framework calls. Treat this as a systems research prototype, not a replacement for the Android Emulator or a real Android device.
 
@@ -25,7 +25,7 @@ The APK runner supports only a narrow subset of DEX instructions and framework c
 
 GRIXDroid includes an optional real-Android smoke test using a temporary GitHub-hosted macOS runner. macOS uses Apple's Hypervisor.framework, so this development workflow does not require renting a Linux KVM machine.
 
-Run it from **Actions → Android Emulator Smoke (Free macOS) → Run workflow**. It boots an Android API 35 virtual device, launches Android Settings, and saves a short-lived screenshot/log artifact.
+Run it from **Actions → Android Emulator Smoke (Free macOS) → Run workflow**. It boots an Android API 35 virtual device using Google's `google_apis_playstore` system image, verifies that Play Store and Google Play services are installed, launches the Play Store UI without a personal account, and saves a short-lived screenshot/log artifact.
 
 This is an automated CI test, **not** an always-on cloud phone or a public streaming service. Standard GitHub-hosted runners are free for public repositories; see [GitHub Actions billing](https://docs.github.com/en/actions/concepts/billing-and-usage). The distinction between the temporary test emulator and a future persistent device host is documented in [the free-first Android plan](docs/FREE_FIRST_ANDROID_PLAN.md).
 
