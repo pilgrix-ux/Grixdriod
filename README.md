@@ -1,8 +1,8 @@
 # GRIXDroid
 
-**An experimental, browser-native ARM and Android runtime prototype built with Rust and WebAssembly.**
+**A browser-based Android device control workspace with a private ADB bridge and an experimental Rust/WebAssembly ARM lab.**
 
-GRIXDroid explores running selected Android/Dalvik workloads locally in a browser, without a hosted Android VM or remote screen-streaming service. The emulator core and constrained APK/DEX runner execute in WebAssembly on the visitor's device.
+GRIXDroid can control a real Android phone or an already-running Android Emulator through its ADB bridge: screen mirroring, touch/navigation input, APK installation, app launching and logcat. Its separate Rust/WebAssembly ARM Lab includes a constrained Dalvik HLE experiment; that experiment is not a complete Android operating system or general APK emulator. GRIXDroid does not currently provide always-on public cloud devices.
 
 ## Current capabilities
 
