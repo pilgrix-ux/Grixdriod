@@ -90,7 +90,7 @@ export function resolveAvdManagerPath(sdkRoot, override = '', platform = process
 
   // Keep compatibility with older SDK layouts that used tools/bin.
   candidates.push(path.join(sdkRoot, 'tools', 'bin', executable));
-  return candidates.find((candidate) => existsSync(candidate)) || candidates[0];
+  return candidates.find((candidate) => existsSync(candidate)) || 'avdmanager';
 }
 
 export function getWorkerConfig(env = process.env) {
@@ -873,9 +873,12 @@ export async function startCloudWorker(config = getWorkerConfig()) {
 
   const image = await assertSystemImageInstalled(config);
   await run(config.emulator, ['-version']);
-  await run(config.avdManager, ['--version']).catch(() => {
-    throw new Error('avdmanager was not found. Install Android SDK Command-line Tools.');
-  });
+  try {
+    await run(config.avdManager, ['--version']);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error('Could not execute Android SDK avdmanager (' + config.avdManager + '): ' + detail + '. Install Android SDK Command-line Tools and ensure avdmanager is on PATH.');
+  }
   if (config.accel !== 'off') {
     const accel = await run(config.emulator, ['-accel-check']).catch((error) => ({ stdout: 'acceleration check failed: ' + error.message }));
     if (config.accel === 'on' && /no accelerator|not installed|failed/i.test(String(accel.stdout))) {
