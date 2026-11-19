@@ -593,6 +593,7 @@ async function loadPersistedDevices(config, instances) {
         state: 'stopped',
         lastLog: '',
       };
+      await verifyAvdImage(config, meta);
       const active = await run(config.adb, ['-s', meta.serial, 'get-state'], { timeout: 3000 }).catch(() => null);
       if (active && String(active.stdout).trim() === 'device') {
         const boot = await waitForBoot(config, meta).catch(() => null);
@@ -611,8 +612,9 @@ async function loadPersistedDevices(config, instances) {
         await persistMeta(meta).catch(() => {});
       }
       instances.set(meta.cloudDeviceId, meta);
-    } catch {
-      // Ignore incomplete metadata directories; the persistent files remain untouched for inspection.
+    } catch (error) {
+      process.stderr.write('[worker] Could not restore Android device from ' + deviceDir + ': ' + (error instanceof Error ? error.message : String(error)) + '\n');
+      // Keep the persistent AVD files untouched so an operator can inspect or recover them.
     }
   }
 }
