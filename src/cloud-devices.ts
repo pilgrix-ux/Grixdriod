@@ -317,7 +317,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     return { x, y };
   }
 
-  async function sendViewerCommand(command: Record<string, string | number>): Promise<void> {
+  async function sendViewerCommand(command: Record<string, string | number | boolean>): Promise<void> {
     if (!viewerDeviceId || !authSession) throw new Error('Open a signed-in Android device before sending input.');
     viewerInputStatus.textContent = 'Sending input to Android…';
     await restRequest<unknown>('/cloud_device_actions', {
