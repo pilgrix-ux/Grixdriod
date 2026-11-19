@@ -15,10 +15,10 @@ References:
 
 The workflow at `.github/workflows/android-emulator-smoke.yml`:
 
-1. Starts a temporary Android API 35 virtual device on a GitHub-hosted macOS Intel runner.
+1. Starts a temporary Android 15 (API 35) virtual device using the official `google_apis_playstore` system-image target on a GitHub-hosted macOS Intel runner.
 2. Waits for Android to finish booting.
-3. Checks Android's Package Manager and the Settings package.
-4. Launches the real Android Settings application through ADB.
+3. Verifies that Android Settings, Google Play Store (`com.android.vending`), and Google Play services (`com.google.android.gms`) are installed.
+4. Launches the Play Store app through ADB without adding any personal Google account to the CI runner.
 5. Saves a screenshot and activity dump as a short-lived workflow artifact.
 6. Shuts down the runner and emulator when the job finishes.
 
@@ -26,6 +26,18 @@ Run it from GitHub:
 **Actions → Android Emulator Smoke (Free macOS) → Run workflow**.
 
 The first run is also triggered when this workflow file is added or changed on `main`.
+
+## Google Play boundary
+
+The workflow requests Google's official `google_apis_playstore` emulator image. Android's documentation says Play Store-enabled device profiles include both the Google Play Store app and access to Google Play services. The workflow verifies those packages and opens the Store UI.
+
+The CI device is disposable and is not signed in to a Google account. Downloading apps from the Store requires the user to sign in and may depend on account, device, regional, and app-compatibility checks. Never put a personal Google password or account credentials into workflow files, logs, or repository secrets for this smoke test.
+
+This does not copy Google Play into GRIXDroid, and the project must not redistribute Google's proprietary Play Store or Play services packages. A future public cloud-device offering with Google Play needs a separately reviewed, properly authorized distribution/hosting approach; the CI image is a development test image, not permission to bundle GMS in our own server images.
+
+References:
+- https://developer.android.com/studio/run/managing-avds
+- https://developer.android.com/studio/run/emulator
 
 ## Important boundary
 
