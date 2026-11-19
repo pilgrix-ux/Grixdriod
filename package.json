@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build:wasm": "wasm-pack build --target web",
-    "build": "npm run build:wasm && tsc && vite build",
+    "build": "bash scripts/vercel-build.sh",
     "preview": "vite preview",
     "test": "cargo test --lib",
     "device-bridge": "node server/adb-bridge.mjs",
