@@ -107,12 +107,16 @@ async function listDevices() {
     const version = await run(['-s', serial, 'shell', 'getprop', 'ro.build.version.release']);
     const sdk = await run(['-s', serial, 'shell', 'getprop', 'ro.build.version.sdk']);
     const wm = await run(['-s', serial, 'shell', 'wm', 'size']);
+    const playStore = await run(['-s', serial, 'shell', 'pm', 'path', 'com.android.vending']).catch(() => '');
+    const playServices = await run(['-s', serial, 'shell', 'pm', 'path', 'com.google.android.gms']).catch(() => '');
     devices.push({
       serial,
       model: model.trim() || 'Android device',
       androidVersion: version.trim() || 'Unknown',
       sdk: sdk.trim() || 'Unknown',
       resolution: parseResolution(wm),
+      hasPlayStore: playStore.trim().length > 0,
+      hasGooglePlayServices: playServices.trim().length > 0,
     });
   }
   return devices;
