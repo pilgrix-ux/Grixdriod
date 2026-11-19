@@ -98,6 +98,12 @@ test('prefers the SDK latest alias and honors an explicit avdmanager override', 
   }
 });
 
+test('worker config bounds the independent Android input polling interval', () => {
+  assert.equal(getWorkerConfig({}).actionPollMs, 350);
+  assert.equal(getWorkerConfig({ GRIXDROID_ACTION_POLL_MS: '50' }).actionPollMs, 100);
+  assert.equal(getWorkerConfig({ GRIXDROID_ACTION_POLL_MS: '9000' }).actionPollMs, 2000);
+});
+
 test('worker config keeps the modern Supabase API key separate from its service-role JWT', () => {
   const config = getWorkerConfig({
     SUPABASE_URL: 'https://example.supabase.co',
