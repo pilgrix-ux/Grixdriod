@@ -80,12 +80,12 @@ jobs:
             nohup emulator -avd "$AVD_NAME" -port "$PORT" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > "$RUNNER_TEMP/grixdroid-emulator-restart.log" 2>&1 &
             adb -s "$SERIAL" wait-for-device
             for attempt in $(seq 1 180); do
-              BOOTED="$(adb -s "$SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
+              BOOTED="$(adb -s "$SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
               if [ "$BOOTED" = "1" ]; then break; fi
               sleep 3
             done
-            test "$(adb -s "$SERIAL" shell getprop sys.boot_completed | tr -d '\\r')" = "1"
-            test "$(adb -s "$SERIAL" shell settings get global grixdroid_persistence_probe | tr -d '\\r')" = "survives_restart"
+            test "$(adb -s "$SERIAL" shell getprop sys.boot_completed | tr -d '\r')" = "1"
+            test "$(adb -s "$SERIAL" shell settings get global grixdroid_persistence_probe | tr -d '\r')" = "survives_restart"
             test -n "$(adb -s "$SERIAL" shell pm path com.android.vending)"
             test -n "$(adb -s "$SERIAL" shell pm path com.google.android.gms)"
 
