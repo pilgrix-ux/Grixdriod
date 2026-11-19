@@ -7,7 +7,7 @@ import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { existsSync, readdirSync } from 'node:fs';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const execFileAsync = promisify(execFile);
@@ -29,9 +29,36 @@ export function validateAction(body) {
     return { type: 'swipe', x: values[0], y: values[1], endX: values[2], endY: values[3], durationMs };
   }
   if (body.type === 'key') {
-    const keys = { BACK: '4', HOME: '3', APP_SWITCH: '187', ENTER: '66' };
-    if (!Object.hasOwn(keys, body.key)) throw new Error('Supported keys are BACK, HOME, APP_SWITCH and ENTER.');
+    const keys = { BACK: '4', HOME: '3', APP_SWITCH: '187', ENTER: '66', POWER: '26' };
+    if (!Object.hasOwn(keys, body.key)) throw new Error('Supported keys are BACK, HOME, APP_SWITCH, ENTER and POWER.');
     return { type: 'key', key: body.key, code: keys[body.key] };
+  }
+  if (body.type === 'rotate') {
+    if (!['portrait', 'landscape'].includes(body.orientation)) throw new Error('Rotation must be portrait or landscape.');
+    return { type: 'rotate', orientation: body.orientation };
+  }
+  if (body.type === 'night_mode') {
+    if (typeof body.enabled !== 'boolean') throw new Error('Night mode enabled must be true or false.');
+    return { type: 'night_mode', enabled: body.enabled };
+  }
+  if (body.type === 'font_scale') {
+    const scale = Number(body.scale);
+    if (!Number.isFinite(scale) || scale < 0.85 || scale > 1.3) throw new Error('Font scale must be between 0.85 and 1.3.');
+    return { type: 'font_scale', scale };
+  }
+  if (body.type === 'fingerprint') return { type: 'fingerprint' };
+  if (body.type === 'install_apk') {
+    const objectPath = String(body.object_path || '');
+    const filename = String(body.filename || '');
+    const parts = objectPath.split('/');
+    if (parts.length !== 3 || !UUID_RE.test(parts[0]) || !UUID_RE.test(parts[1]) ||
+        !/^[a-f0-9-]{36}\.apk$/i.test(parts[2]) || path.posix.normalize(objectPath) !== objectPath) {
+      throw new Error('APK storage path is invalid.');
+    }
+    if (!filename || filename.length > 120 || !/\.apk$/i.test(filename) || /[\\/\u0000-\u001f]/.test(filename)) {
+      throw new Error('APK filename must be a valid .apk filename.');
+    }
+    return { type: 'install_apk', object_path: objectPath, filename };
   }
   if (body.type === 'text') {
     if (typeof body.text !== 'string' || body.text.length < 1 || body.text.length > 120 || !/^[A-Za-z0-9@._,:/+ =-]+$/.test(body.text)) {
@@ -567,7 +594,34 @@ async function stopDevice(config, meta) {
   });
 }
 
-async function executeAction(config, meta, action) {
+async function installApk(config, meta, normalized, userId, deviceId) {
+  if (!UUID_RE.test(userId || '') || !UUID_RE.test(deviceId || '') ||
+      !normalized.object_path.startsWith(userId + '/' + deviceId + '/')) {
+    throw new Error('APK upload does not belong to this Android device owner.');
+  }
+  const url = config.controlUrl + '/storage/v1/object/authenticated/grixdroid-apks/' +
+    normalized.object_path.split('/').map(encodeURIComponent).join('/');
+  const response = await fetch(url, {
+    headers: { apikey: config.apiKey, Authorization: 'Bearer ' + config.serviceRoleJwt },
+    cache: 'no-store',
+    signal: AbortSignal.timeout(60000),
+  });
+  if (!response.ok) throw new Error('Could not download uploaded APK from private storage (' + response.status + ').');
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (!bytes.length || bytes.length > 50 * 1024 * 1024) throw new Error('APK file is empty or exceeds the 50 MB limit.');
+  const localPath = path.join(meta.deviceDir, 'upload-' + randomUUID() + '.apk');
+  try {
+    await writeFile(localPath, bytes, { mode: 0o600 });
+    const result = await adb(config, meta.serial, ['install', '-r', localPath], { timeout: 180000, maxBuffer: 2 * 1024 * 1024 });
+    const output = String(result.stdout || '') + String(result.stderr || '');
+    if (!/success/i.test(output)) throw new Error(output.trim() || 'Android package installer did not confirm success.');
+    process.stdout.write('[worker] Installed APK ' + normalized.filename + ' on ' + meta.cloudDeviceId + '\\n');
+  } finally {
+    await rm(localPath, { force: true }).catch(() => {});
+  }
+}
+
+async function executeAction(config, meta, action, context = {}) {
   const normalized = validateAction(action);
   const width = meta.resolution?.width || 0;
   const height = meta.resolution?.height || 0;
@@ -586,6 +640,17 @@ async function executeAction(config, meta, action) {
     await adb(config, meta.serial, ['shell', 'input', 'keyevent', normalized.code]);
   } else if (normalized.type === 'text') {
     await adb(config, meta.serial, ['shell', 'input', 'text', normalized.text]);
+  } else if (normalized.type === 'rotate') {
+    await adb(config, meta.serial, ['shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0']);
+    await adb(config, meta.serial, ['shell', 'settings', 'put', 'system', 'user_rotation', normalized.orientation === 'landscape' ? '1' : '0']);
+  } else if (normalized.type === 'night_mode') {
+    await adb(config, meta.serial, ['shell', 'cmd', 'uimode', 'night', normalized.enabled ? 'yes' : 'no']);
+  } else if (normalized.type === 'font_scale') {
+    await adb(config, meta.serial, ['shell', 'settings', 'put', 'system', 'font_scale', String(normalized.scale)]);
+  } else if (normalized.type === 'fingerprint') {
+    await run(config.adb, ['-s', meta.serial, 'emu', 'finger', 'touch', '1']);
+  } else if (normalized.type === 'install_apk') {
+    await installApk(config, meta, normalized, context.userId, context.deviceId);
   }
 }
 
@@ -603,7 +668,7 @@ async function processQueuedDeviceActions(config, instances) {
       if (!meta || meta.state !== 'running') {
         throw new Error('Android device is not running on this worker.');
       }
-      await executeAction(config, meta, item.command);
+      await executeAction(config, meta, item.command, { userId: item.user_id, deviceId: item.device_id });
     } catch (error) {
       failure = error instanceof Error ? error.message : String(error);
     }
