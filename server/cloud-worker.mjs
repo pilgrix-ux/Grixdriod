@@ -4,6 +4,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { existsSync, readdirSync } from 'node:fs';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
@@ -61,6 +62,37 @@ export function parseSystemImagePackage(raw) {
   };
 }
 
+export function resolveAvdManagerPath(sdkRoot, override = '', platform = process.platform) {
+  if (override) return override;
+  if (!sdkRoot) return 'avdmanager';
+
+  const executable = platform === 'win32' ? 'avdmanager.bat' : 'avdmanager';
+  const commandLineTools = path.join(sdkRoot, 'cmdline-tools');
+  const candidates = [
+    path.join(commandLineTools, 'latest', 'bin', executable),
+    path.join(commandLineTools, 'bin', executable),
+  ];
+
+  // Android SDK installations may keep the command-line tools in a versioned
+  // folder (for example cmdline-tools/19.0/bin) instead of a "latest" alias.
+  try {
+    const versionedDirectories = readdirSync(commandLineTools, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name !== 'latest')
+      .map((entry) => entry.name)
+      .sort((left, right) => right.localeCompare(left, undefined, { numeric: true }));
+
+    for (const version of versionedDirectories) {
+      candidates.push(path.join(commandLineTools, version, 'bin', executable));
+    }
+  } catch {
+    // Fall through to the standard path so startup can report a useful error.
+  }
+
+  // Keep compatibility with older SDK layouts that used tools/bin.
+  candidates.push(path.join(sdkRoot, 'tools', 'bin', executable));
+  return candidates.find((candidate) => existsSync(candidate)) || candidates[0];
+}
+
 export function getWorkerConfig(env = process.env) {
   const sdkRoot = env.ANDROID_SDK_ROOT || env.ANDROID_HOME || '';
   const root = path.resolve(env.GRIXDROID_DATA_ROOT || './.grixdroid-worker-data');
@@ -75,7 +107,7 @@ export function getWorkerConfig(env = process.env) {
     devicesRoot: path.join(root, 'devices'),
     adb: env.ADB_PATH || (sdkRoot ? path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb'),
     emulator: env.EMULATOR_PATH || (sdkRoot ? path.join(sdkRoot, 'emulator', process.platform === 'win32' ? 'emulator.exe' : 'emulator') : 'emulator'),
-    avdManager: env.AVDMANAGER_PATH || (sdkRoot ? path.join(sdkRoot, 'cmdline-tools', 'latest', 'bin', process.platform === 'win32' ? 'avdmanager.bat' : 'avdmanager') : 'avdmanager'),
+    avdManager: resolveAvdManagerPath(sdkRoot, env.AVDMANAGER_PATH || ''),
     systemImage,
     scrcpyServerPath: env.SCRCPY_SERVER_PATH || '',
     scrcpyVersion: env.SCRCPY_VERSION || '',
