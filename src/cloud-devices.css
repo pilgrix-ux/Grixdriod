@@ -1,0 +1,167 @@
+/* GRIXDroid cloud-device workspace */
+.grix-cloud-panel {
+  width: min(100% - 2rem, 1120px);
+  margin: 1.25rem auto 1.5rem;
+  padding: clamp(1rem, 2.5vw, 1.6rem);
+  border: 1px solid rgba(139, 92, 246, .27);
+  border-radius: 1.15rem;
+  background: linear-gradient(145deg, rgba(19, 20, 35, .98), rgba(12, 13, 23, .98));
+  color: #f1f2fb;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, .22);
+}
+.grix-cloud-panel [hidden] { display: none !important; }
+.grix-cloud-heading, .grix-cloud-toolbar, .grix-cloud-section-heading,
+.grix-cloud-card-top, .grix-cloud-auth-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+}
+.grix-cloud-eyebrow {
+  color: #a78bfa;
+  font: 700 .65rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .16em;
+}
+.grix-cloud-heading h2 { margin: .35rem 0; font-size: clamp(1.25rem, 3vw, 1.65rem); }
+.grix-cloud-heading p, .grix-cloud-section-heading p, .grix-cloud-request-box p {
+  margin: .25rem 0 0;
+  color: #a8abc0;
+  font-size: .86rem;
+}
+.grix-cloud-status, .grix-cloud-state {
+  flex: 0 0 auto;
+  border: 1px solid rgba(148, 163, 184, .25);
+  border-radius: 999px;
+  padding: .38rem .6rem;
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, .08);
+  font: 700 .61rem/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.grix-cloud-status.connected, .grix-cloud-state-running, .grix-cloud-state-fulfilled {
+  color: #86efac;
+  border-color: rgba(74, 222, 128, .3);
+  background: rgba(34, 197, 94, .08);
+}
+.grix-cloud-state-error, .grix-cloud-state-failed {
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, .3);
+  background: rgba(239, 68, 68, .08);
+}
+.grix-cloud-notice {
+  margin: 1rem 0;
+  padding: .75rem .9rem;
+  border: 1px solid rgba(148, 163, 184, .2);
+  border-radius: .75rem;
+  background: rgba(148, 163, 184, .07);
+  color: #d5d8e8;
+  font-size: .84rem;
+  line-height: 1.55;
+}
+.grix-cloud-notice.success { border-color: rgba(74, 222, 128, .3); color: #bbf7d0; }
+.grix-cloud-notice.error { border-color: rgba(248, 113, 113, .35); color: #fecaca; }
+.grix-cloud-auth { max-width: 520px; margin: 1.2rem auto; }
+.grix-cloud-auth-form, .grix-cloud-request-form { display: grid; gap: .8rem; }
+.grix-cloud-auth-form label, .grix-cloud-request-form label {
+  display: grid;
+  gap: .38rem;
+  color: #c4c7d7;
+  font-size: .78rem;
+  font-weight: 600;
+}
+.grix-cloud-auth-form input, .grix-cloud-request-form input, .grix-cloud-request-form select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, .28);
+  border-radius: .65rem;
+  padding: .72rem .8rem;
+  color: #f8fafc;
+  background: #0d1020;
+  font: inherit;
+  outline: none;
+}
+.grix-cloud-auth-form input:focus, .grix-cloud-request-form input:focus, .grix-cloud-request-form select:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, .13);
+}
+.grix-cloud-primary, .grix-cloud-secondary {
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: .65rem;
+  padding: .65rem .9rem;
+  font: 700 .78rem/1.2 ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+.grix-cloud-primary { color: white; background: linear-gradient(135deg, #6d42d8, #8b5cf6); }
+.grix-cloud-secondary { color: #dedcf2; border-color: rgba(167, 139, 250, .24); background: rgba(139, 92, 246, .08); margin-left: .4rem; }
+.grix-cloud-primary:disabled, .grix-cloud-secondary:disabled { opacity: .55; cursor: not-allowed; }
+.grix-cloud-link {
+  border: 0;
+  padding: .35rem .2rem;
+  color: #c4b5fd;
+  background: transparent;
+  font: 600 .76rem/1.35 ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+.grix-cloud-dashboard { display: grid; gap: 1.2rem; }
+.grix-cloud-toolbar { padding-bottom: .9rem; border-bottom: 1px solid rgba(148, 163, 184, .14); }
+.grix-cloud-toolbar span { overflow-wrap: anywhere; color: #aeb1c5; font-size: .78rem; }
+.grix-cloud-section-heading { margin-top: .15rem; }
+.grix-cloud-section-heading h3, .grix-cloud-request-box h3 { margin: 0; font-size: .95rem; }
+.grix-cloud-device-list, .grix-cloud-request-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: .7rem; }
+.grix-cloud-device-card, .grix-cloud-request-card {
+  min-width: 0;
+  padding: .9rem;
+  border: 1px solid rgba(148, 163, 184, .17);
+  border-radius: .8rem;
+  background: rgba(4, 6, 16, .42);
+}
+.grix-cloud-card-top strong { min-width: 0; overflow-wrap: anywhere; font-size: .88rem; }
+.grix-cloud-device-card p, .grix-cloud-request-card p {
+  margin: .6rem 0 0;
+  color: #aeb1c5;
+  font-size: .75rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.grix-cloud-request-box {
+  display: grid;
+  grid-template-columns: minmax(180px, .8fr) minmax(0, 1.2fr);
+  gap: 1rem;
+  align-items: start;
+  padding: 1rem;
+  border: 1px solid rgba(139, 92, 246, .2);
+  border-radius: .85rem;
+  background: rgba(109, 66, 216, .07);
+}
+.grix-cloud-request-form { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; }
+.grix-cloud-request-form button { grid-column: 1 / -1; }
+.grix-cloud-empty {
+  grid-column: 1 / -1;
+  padding: 1.1rem;
+  border: 1px dashed rgba(148, 163, 184, .22);
+  border-radius: .75rem;
+  color: #9da2b8;
+  font-size: .8rem;
+  text-align: center;
+}
+.grix-cloud-error-detail { color: #fca5a5 !important; }
+.grix-cloud-footnote {
+  margin-top: 1.1rem;
+  padding-top: .85rem;
+  border-top: 1px solid rgba(148, 163, 184, .14);
+  color: #9da2b8;
+  font-size: .72rem;
+  line-height: 1.6;
+}
+@media (max-width: 680px) {
+  .grix-cloud-panel { width: min(100% - 1rem, 1120px); margin: .75rem auto 1rem; padding: .9rem; }
+  .grix-cloud-heading { align-items: flex-start; }
+  .grix-cloud-status { max-width: 115px; white-space: normal; text-align: center; }
+  .grix-cloud-request-box { grid-template-columns: 1fr; }
+  .grix-cloud-request-form { grid-template-columns: 1fr; }
+  .grix-cloud-request-form button { grid-column: auto; }
+  .grix-cloud-toolbar { align-items: flex-start; }
+  .grix-cloud-toolbar > div { display: flex; flex-wrap: wrap; justify-content: flex-end; }
+}
