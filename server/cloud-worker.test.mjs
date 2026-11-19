@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { getWorkerConfig, parseResolution, validateAction } from './cloud-worker.mjs';
+import { getWorkerConfig, parseResolution, parseSystemImagePackage, validateAction } from './cloud-worker.mjs';
 
 test('normalizes tap coordinates without accepting values outside the screen', () => {
   assert.deepEqual(validateAction({ type: 'tap', x: 0.5, y: 0.25 }), { type: 'tap', x: 0.5, y: 0.25 });
@@ -33,6 +33,18 @@ test('reads the final active display resolution from adb output', () => {
   assert.deepEqual(parseResolution('unknown'), { width: 0, height: 0 });
 });
 
+test('parses the official Google Play Android Emulator system image', () => {
+  assert.deepEqual(parseSystemImagePackage('system-images;android-35;google_apis_playstore;x86_64'), {
+    apiLevel: 35,
+    target: 'google_apis_playstore',
+    abi: 'x86_64',
+    relativePath: path.join('system-images', 'android-35', 'google_apis_playstore', 'x86_64'),
+    hasPlayStore: true,
+  });
+  assert.equal(parseSystemImagePackage('system-images;android-35;google_apis;x86_64').hasPlayStore, false);
+  assert.throws(() => parseSystemImagePackage('system-images;android-35;../bad;x86_64'), /must look like/);
+});
+
 test('worker config clamps capacity and keeps its API loopback-only by default', () => {
   const config = getWorkerConfig({
     ANDROID_SDK_ROOT: '/opt/android-sdk',
@@ -44,7 +56,7 @@ test('worker config clamps capacity and keeps its API loopback-only by default',
   assert.equal(config.sdkRoot, '/opt/android-sdk');
   assert.equal(config.dataRoot, path.resolve('/var/lib/grixdroid'));
   assert.match(config.adb, /platform-tools/);
-  assert.match(config.systemImage, /google_apis/);
+  assert.equal(config.systemImage, 'system-images;android-35;google_apis_playstore;x86_64');
 });
 
 test('worker config refuses unknown accelerator modes', () => {
