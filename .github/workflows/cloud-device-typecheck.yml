@@ -5,6 +5,9 @@ on:
     branches: ["**"]
     paths:
       - "src/**"
+      - "server/**"
+      - ".env.worker.example"
+      - "docs/CLOUD_DEVICE_ARCHITECTURE.md"
       - "supabase/migrations/**"
       - "package.json"
       - "package-lock.json"
@@ -52,6 +55,9 @@ jobs:
 
       - name: Install JavaScript dependencies
         run: npm ci
+
+      - name: Test cloud worker input validation
+        run: npm run test:worker
 
       - name: Build browser application and type-check TypeScript
         run: npm run build
