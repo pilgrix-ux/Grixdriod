@@ -202,7 +202,7 @@ const MAX_UPLOAD_BYTES: usize = 32 * 1024 * 1024; // 32 MiB APK/ROM soft cap
 /// unless the caller explicitly requests more (max 4096).
 #[wasm_bindgen]
 pub fn init_emulator(ram_mb: u32) {
-    log("grixdroid: Wasm CPU emulator initialized");
+    log("GRIXDroid: Wasm CPU emulator initialized");
 
     let ram_mb = if ram_mb == 0 {
         512

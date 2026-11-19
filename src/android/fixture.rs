@@ -9,8 +9,8 @@ use zip::ZipWriter;
 use crate::android::error::Result;
 
 /// Build a minimal DEX with:
-/// `Lcom/grixdroid/Hello;.main([Ljava/lang/String;)V` that const-strings and
-/// invoke-statics `Lgrixdroid/Hle;.println(Ljava/lang/String;)V`.
+/// `Lcom/nekodroid/Hello;.main([Ljava/lang/String;)V` that const-strings and
+/// invoke-statics `Lnekodroid/Hle;.println(Ljava/lang/String;)V`.
 pub fn build_hello_dex() -> Result<Vec<u8>> {
     let mut b = DexBuilder::new();
     let s_hello = b.string("Hello from GRIXDroid");
@@ -22,9 +22,9 @@ pub fn build_hello_dex() -> Result<Vec<u8>> {
     let s_shorty_l = b.string("VL");
     let s_shorty_va = b.string("V[L");
 
-    let t_hello = b.type_of("Lcom/grixdroid/Hello;");
+    let t_hello = b.type_of("Lcom/nekodroid/Hello;");
     let t_object = b.type_of("Ljava/lang/Object;");
-    let t_hle = b.type_of("Lgrixdroid/Hle;");
+    let t_hle = b.type_of("Lnekodroid/Hle;");
     let t_string = b.type_of("Ljava/lang/String;");
     let t_string_arr = b.type_of("[Ljava/lang/String;");
     let t_void = b.type_of("V");
@@ -93,9 +93,9 @@ pub fn build_arith_dex() -> Result<Vec<u8>> {
     let s_shorty_i = b.string("VI");
     let s_shorty_va = b.string("V[L");
 
-    let t_arith = b.type_of("Lcom/grixdroid/Arith;");
+    let t_arith = b.type_of("Lcom/nekodroid/Arith;");
     let t_object = b.type_of("Ljava/lang/Object;");
-    let t_hle = b.type_of("Lgrixdroid/Hle;");
+    let t_hle = b.type_of("Lnekodroid/Hle;");
     let t_string_arr = b.type_of("[Ljava/lang/String;");
     let t_void = b.type_of("V");
     let t_int = b.type_of("I");
@@ -166,7 +166,7 @@ pub fn build_hello_apk() -> Result<Vec<u8>> {
         zip.start_file("AndroidManifest.xml", opts)
             .map_err(|e| crate::android::error::AndroidError::Runtime(e.to_string()))?;
         zip.write_all(
-            b"#grixdroid-manifest\npackage=com.grixdroid\nactivity=Lcom/grixdroid/Hello;\n",
+            b"#nekodroid-manifest\npackage=com.nekodroid\nactivity=Lcom/nekodroid/Hello;\n",
         )
         .map_err(|e| crate::android::error::AndroidError::Runtime(e.to_string()))?;
         zip.finish()

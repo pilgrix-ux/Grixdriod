@@ -49,7 +49,7 @@ app.innerHTML = `
   <div class="container">
     <header class="header">
       <div class="logo-glow"></div>
-      <h1>🐱 grixdroid</h1>
+      <h1>GRIXDroid</h1>
       <p class="subtitle">Wasm ARM emulator + constrained APK/DEX HLE</p>
     </header>
 

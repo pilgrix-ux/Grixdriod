@@ -143,7 +143,7 @@ impl HleHost {
 
         // System.out.println
         if (class == "Ljava/io/PrintStream;" && name == "println")
-            || (class == "Lgrixdroid/Hle;" && name == "println")
+            || (class == "Lnekodroid/Hle;" && name == "println")
         {
             let msg = args
                 .last()
@@ -154,7 +154,7 @@ impl HleHost {
         }
 
         // HLE integer print (for arith fixtures)
-        if class == "Lgrixdroid/Hle;" && name == "printInt" {
+        if class == "Lnekodroid/Hle;" && name == "printInt" {
             let n = args.last().map(|v| v.as_int()).unwrap_or(0);
             self.log_line(format!("{n}"));
             return Some(Value::Int(0));

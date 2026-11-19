@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn hello_apk_runs_and_logs() {
         let mut rt = AppRuntime::load_hello_fixture().expect("load");
-        assert!(rt.apk.package_name.contains("grixdroid") || rt.apk.package_name == "com.grixdroid");
+        assert!(rt.apk.package_name.contains("nekodroid") || rt.apk.package_name == "com.nekodroid");
         rt.launch().expect("launch");
         let n = rt.run_batch(10_000).expect("run");
         assert!(n > 0);
@@ -163,7 +163,7 @@ mod tests {
         let bytes = fixture::build_arith_dex().expect("arith dex");
         let dex = DexFile::parse(&bytes).expect("parse");
         let mut vm = Vm::new(dex);
-        vm.call_method("Lcom/grixdroid/Arith;", "main", &[Value::Obj(0)])
+        vm.call_method("Lcom/nekodroid/Arith;", "main", &[Value::Obj(0)])
             .expect("call");
         let _ = vm.run_batch(1_000).expect("run");
         assert!(vm.halted);
