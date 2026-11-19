@@ -66,10 +66,6 @@ jobs:
             adb shell monkey -p com.android.vending 1
             sleep 5
 
-            echo "Launching the Play Store app (no Google account is added in CI):"
-            adb shell monkey -p com.android.vending 1
-            sleep 5
-
             echo "Proving Android /data survives a full emulator stop and restart:"
             adb shell settings put global grixdroid_persistence_probe survives_restart
             adb shell sync
