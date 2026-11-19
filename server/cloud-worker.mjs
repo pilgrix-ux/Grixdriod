@@ -281,6 +281,7 @@ async function waitForBoot(config, meta) {
   const deadline = Date.now() + config.bootTimeoutMs;
   await run(config.adb, ['-s', meta.serial, 'wait-for-device'], { timeout: Math.min(config.bootTimeoutMs, 120000) });
   while (Date.now() < deadline) {
+    if (meta.state === 'error') throw new Error(meta.lastError || 'Emulator exited before Android boot completed.');
     if (meta.process && meta.process.exitCode !== null) throw new Error(meta.lastError || 'Emulator exited before Android boot completed.');
     const result = await adb(config, meta.serial, ['shell', 'getprop', 'sys.boot_completed']).catch(() => ({ stdout: '' }));
     if (String(result.stdout).trim() === '1') {
