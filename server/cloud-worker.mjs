@@ -120,6 +120,7 @@ export function getWorkerConfig(env = process.env) {
     port: Math.max(1024, Math.min(65535, Number(env.GRIXDROID_WORKER_PORT) || 8788)),
     capacity,
     pollMs: Math.max(1500, Math.min(30000, Number(env.GRIXDROID_POLL_MS) || 5000)),
+    actionPollMs: Math.max(100, Math.min(2000, Number(env.GRIXDROID_ACTION_POLL_MS) || 350)),
     bootTimeoutMs: Math.max(120000, Math.min(1200000, Number(env.GRIXDROID_BOOT_TIMEOUT_MS) || 600000)),
     workerId: env.GRIXDROID_WORKER_ID || '',
     workerLabel: env.GRIXDROID_WORKER_LABEL || os.hostname(),
@@ -588,6 +589,41 @@ async function executeAction(config, meta, action) {
   }
 }
 
+async function processQueuedDeviceActions(config, instances) {
+  const result = await callRpc(config, 'grixdroid_claim_device_actions', {
+    p_worker_id: config.workerId,
+    p_limit: 24,
+  });
+  const actions = Array.isArray(result) ? result : [];
+
+  for (const item of actions) {
+    let failure = null;
+    try {
+      const meta = instances.get(item.device_id);
+      if (!meta || meta.state !== 'running') {
+        throw new Error('Android device is not running on this worker.');
+      }
+      await executeAction(config, meta, item.command);
+    } catch (error) {
+      failure = error instanceof Error ? error.message : String(error);
+    }
+
+    try {
+      await callRpc(config, 'grixdroid_finish_device_action', {
+        p_action_id: item.action_id,
+        p_worker_id: config.workerId,
+        p_success: !failure,
+        p_failure_reason: failure,
+      });
+    } catch (error) {
+      process.stderr.write(
+        '[worker] Could not finish Android input action ' + item.action_id + ': ' +
+        (error instanceof Error ? error.message : String(error)) + '\\n',
+      );
+    }
+  }
+}
+
 async function readScreenshot(config, meta) {
   if (meta.state !== 'running') throw new Error('Start the Android device before requesting its screen.');
   const result = await adb(config, meta.serial, ['exec-out', 'screencap', '-p'], { encoding: 'buffer', maxBuffer: 16 * 1024 * 1024, timeout: 20000 });
@@ -877,9 +913,24 @@ export async function startCloudWorker(config = getWorkerConfig()) {
   process.stdout.write('[worker] Acceleration: ' + config.accel + ' | GPU: ' + config.gpu + '\n');
 
   let stopping = false;
+  let actionPollBusy = false;
+  const actionTimer = setInterval(() => {
+    if (stopping || actionPollBusy) return;
+    if (![...instances.values()].some((meta) => meta.state === 'running')) return;
+    actionPollBusy = true;
+    void processQueuedDeviceActions(config, instances)
+      .catch((error) => {
+        process.stderr.write('[worker] Android input poll failed: ' +
+          (error instanceof Error ? error.message : String(error)) + '\\n');
+      })
+      .finally(() => { actionPollBusy = false; });
+  }, config.actionPollMs);
+  actionTimer.unref();
+
   const shutdown = async () => {
     if (stopping) return;
     stopping = true;
+    clearInterval(actionTimer);
     server.close();
     process.stdout.write('[worker] Worker API stopped. Android devices and persistent volumes were left intact.\n');
   };
