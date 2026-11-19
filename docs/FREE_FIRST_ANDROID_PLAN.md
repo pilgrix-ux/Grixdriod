@@ -57,21 +57,20 @@ Develop the real Android path in increments:
 - [ ] Run the workflow and confirm the Android boot artifact is produced.
 - [ ] Add an Android test APK and verify install, launch, and uninstall with ADB.
 
-### Milestone B — device-provider boundary
+### Milestone B — private web device integration
 
-Define a provider interface before coupling the UI to a specific VM host. It should cover:
-- Create and stop a device session.
-- Report session state and device capabilities.
-- Upload and install an APK.
-- Launch an installed package.
-- Return a time-limited screen/input connection.
-- Collect logs and screenshots.
+- [x] Add a browser device console to the website.
+- [x] Add a private ADB bridge for attached physical Android devices and already-running emulators.
+- [x] Support screen polling, touch/swipe, Back/Home/Recents, APK installation, package listing/launch, Play Store detection/launch and logcat.
+- [x] Keep the bridge loopback-only by default; require explicit token, origin allowlist and HTTPS proxy for remote connections.
+- [ ] Replace 1 FPS screenshot polling with a WebRTC streaming provider.
+- [ ] Add authenticated per-user session routing before any public deployment.
 
-The first provider used in CI can be the temporary GitHub Actions emulator for tests only. A CI provider must never be exposed as if it were an always-on user session.
+The ADB bridge is the first working provider for a privately attached device. The temporary GitHub Actions emulator remains a test runner only and must never be exposed as an always-on user session.
 
-### Milestone C — user-facing streaming prototype
+### Milestone C — production streaming and cloud sessions
 
-Build the browser device shell and streaming/input integration against a controlled test environment. Keep streaming transport and device lifecycle behind the provider interface.
+The browser device shell and first ADB device integration now exist. Next, replace low-rate PNG screen polling with WebRTC, keep transport and device lifecycle behind the provider boundary, and connect a persistent Android worker host.
 
 A visitor-facing service requires a reliable, persistent host with virtualization, storage, bandwidth, monitoring, and isolation. A free CI runner cannot supply that service. Do not launch multi-user cloud sessions until a sustainable host is available.
 
