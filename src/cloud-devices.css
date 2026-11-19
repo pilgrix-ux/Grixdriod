@@ -985,3 +985,13 @@
   .grix-appetize-device-stage { gap: .45rem; }
   .grix-appetize-devtools dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+
+/* Preserve the phone aspect ratio when the real Android display rotates. */
+.grix-appetize-phone-frame {
+  aspect-ratio: var(--device-ratio, 9 / 16);
+  transition: aspect-ratio .18s ease, width .18s ease;
+}
+.grix-appetize-phone-wrap[style*="--device-ratio: 16 / 9"] .grix-appetize-phone-frame {
+  width: min(76vw, 640px);
+}
