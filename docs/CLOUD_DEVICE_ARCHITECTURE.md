@@ -95,6 +95,7 @@ Apply both migrations, in this order, to a **dedicated GRIXDroid Supabase projec
 
 1. `supabase/migrations/20261119000000_grixdroid_cloud_devices.sql`
 2. `supabase/migrations/20261119010000_grixdroid_worker_queue.sql`
+3. `supabase/migrations/20261119020000_grixdroid_webrtc_streams.sql`
 
 The second migration adds service-role-only RPCs for worker heartbeat, atomic queue claiming, lease renewal, request completion/failure and device-state changes. The functions check the service-role JWT and have execute permission revoked from `public`, `anon` and `authenticated`.
 
@@ -156,13 +157,13 @@ The local API uses a bearer token:
 | GET | `/api/v1/devices/:id/screenshot` | Capture the Android display as PNG |
 | POST | `/api/v1/devices/:id/actions` | Allowlisted tap, swipe, navigation key or text action |
 
-This API is intended for host-local development and diagnostics. It is not yet routed through the website's customer authentication, and it does not provide a public WebRTC stream. Do not expose it directly to the internet. Remote binding requires explicit opt-in, a long API token, a strict origin list and a trusted HTTPS/private-network gateway.
+This API is intended for host-local development and diagnostics. It is not routed through the website's customer authentication. The optional MediaMTX WHIP/WHEP publishing path is separate; see [WebRTC streaming setup](WEBRTC_STREAMING.md). Do not expose the worker API directly to the internet. Remote binding requires explicit opt-in, a long API token, a strict origin list and a trusted HTTPS/private-network gateway.
 
 ### Persistence and operational limits
 
 The worker stores the AVD home directory and its writable Android data image below `GRIXDROID_DATA_ROOT`. That root must be backed by durable disk (or a persistent host volume if containerized). Do not put it in `/tmp`, a GitHub Actions workspace, or an ephemeral deployment filesystem. Do not run `-wipe-data` against a customer AVD. Back up the data root before changing Android Emulator or system-image versions.
 
-The worker is currently a single-host development provider. It has no customer WebRTC gateway, NAT/egress isolation, per-user bandwidth quotas, snapshot/restore across different hosts, APK upload endpoint or multi-host rescheduler. A cloud device can be booted only when this process runs on a host with the required Android SDK image and durable storage.
+The worker is currently a single-host development provider. The WHIP/WHEP integration is optional and requires a separately operated MediaMTX gateway, FFmpeg WHIP support, and a version-matched scrcpy server. It does not yet provide NAT/egress isolation, per-user bandwidth quotas, snapshot/restore across different hosts, APK upload endpoint or multi-host rescheduler. A cloud device can be booted only when this process runs on a host with the required Android SDK image and durable storage.
 
 ## Honest current boundary
 
@@ -170,8 +171,8 @@ This is the control-plane/data-model foundation, not an Appetize.io replacement 
 
 - No persistent Android worker is enrolled.
 - No device image is being launched for a customer.
-- No WebRTC stream is exposed.
+- No MediaMTX gateway or worker host is deployed; the repository contains an optional WHIP/WHEP streaming integration that still needs host configuration.
 - No public network egress/IP isolation is provisioned yet.
 - No Google Play packages are redistributed by GRIXDroid.
 
-The next engineering milestone is the worker service and its authenticated job-claim/heartbeat protocol, followed by real Android boot verification and the streaming gateway.
+The next engineering milestone is to provision a dedicated GRIXDroid database and durable Android worker host, apply the migrations, then verify a real Android boot, persistent stop/start and end-to-end WebRTC playback.
