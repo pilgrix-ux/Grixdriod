@@ -632,3 +632,356 @@
   .grix-appetize-phone-frame { width: min(100%, 255px); }
   .grix-appetize-input-area { padding: .45rem .55rem .6rem; }
 }
+
+
+/* Reference-matched Appetize mobile emulator page */
+.grix-cloud-viewer {
+  display: block;
+  overflow: auto;
+  padding: 0;
+  background: #f3f2ef;
+  color: #182033;
+  backdrop-filter: none;
+}
+.grix-cloud-viewer-shell.grix-appetize-shell {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: #f3f2ef;
+  color: #182033;
+  box-shadow: none;
+}
+.grix-appetize-header {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .8rem clamp(1rem, 4vw, 2.5rem);
+  background: #111522;
+  color: #fff;
+}
+.grix-appetize-brand {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  color: #f8fafc;
+  font-size: 1.2rem;
+  letter-spacing: -.035em;
+}
+.grix-appetize-brand-mark {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 8px;
+  background: #fff;
+  color: #111522;
+  font: 900 1.05rem/1 ui-sans-serif, system-ui, sans-serif;
+  transform: rotate(-6deg);
+}
+.grix-appetize-header-actions {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+}
+.grix-appetize-connection {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  color: #c9d2e3;
+  font: 700 .6rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .08em;
+}
+.grix-appetize-connection i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #55d6a5;
+  box-shadow: 0 0 0 3px rgba(85,214,165,.15);
+}
+.grix-appetize-menu, .grix-appetize-close {
+  min-width: 38px;
+  min-height: 38px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #e8ecf5;
+  font-size: 1.35rem;
+  cursor: pointer;
+}
+.grix-appetize-close {
+  min-height: 34px;
+  padding: .45rem .7rem;
+  border: 1px solid rgba(255,255,255,.18);
+  font-size: .72rem;
+}
+.grix-appetize-settings {
+  background: #f8f7f4;
+  border-bottom: 1px solid #deddd8;
+}
+.grix-appetize-setting-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .75rem;
+  padding: 1.05rem clamp(1.1rem, 6.7vw, 3rem);
+  border-bottom: 1px solid #e2e1dc;
+}
+.grix-appetize-setting-row:last-child { border-bottom: 0; }
+.grix-appetize-setting-row > div:first-child {
+  display: grid;
+  gap: .18rem;
+}
+.grix-appetize-setting-row strong {
+  color: #535e71;
+  font-size: .86rem;
+  font-weight: 600;
+}
+.grix-appetize-setting-row small {
+  color: #9aa1ac;
+  font-size: .65rem;
+}
+.grix-appetize-show-hide {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 7px;
+  background: #fff;
+  gap: 3px;
+}
+.grix-appetize-show-hide button {
+  min-width: 82px;
+  min-height: 38px;
+  padding: .4rem .85rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #556074;
+  font: 600 .83rem/1.1 ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+.grix-appetize-show-hide button.selected {
+  border-color: #d2d1cd;
+  background: #e8e7e3;
+  color: #131c2f;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+.grix-appetize-device-area {
+  padding: 1.3rem clamp(.5rem, 3vw, 1.4rem) 1.6rem;
+  background: #f3f2ef;
+}
+.grix-appetize-app-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .65rem;
+  margin: .2rem auto 1rem;
+  color: #192337;
+  font-size: .98rem;
+}
+.grix-appetize-app-title strong {
+  max-width: min(60vw, 420px);
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.grix-appetize-app-checkbox {
+  width: 26px;
+  height: 26px;
+  border: 2px solid #d3d3d0;
+  border-radius: 6px;
+  background: transparent;
+}
+.grix-appetize-app-version {
+  color: #9aa3b2;
+  font-size: .82rem;
+}
+.grix-appetize-device-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(.6rem, 4vw, 2rem);
+  width: min(100%, 760px);
+  margin: 0 auto;
+}
+.grix-appetize-phone-wrap {
+  flex: 0 1 auto;
+  display: flex;
+  justify-content: center;
+  width: auto;
+  max-width: none;
+  max-height: none;
+  transform: scale(var(--device-scale, 1));
+  transform-origin: center center;
+}
+.grix-appetize-phone-frame {
+  position: relative;
+  box-sizing: border-box;
+  display: block;
+  width: min(68vw, 500px);
+  max-height: none;
+  aspect-ratio: 9 / 16;
+  padding: 12px;
+  overflow: hidden;
+  border: 13px solid #030407;
+  border-radius: 43px;
+  background: #05070b;
+  box-shadow: 0 4px 18px rgba(0,0,0,.13);
+}
+.grix-appetize-phone-frame video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  border-radius: 26px;
+  background: #05070b;
+  object-fit: contain;
+  touch-action: none;
+  cursor: crosshair;
+}
+.grix-appetize-camera {
+  position: absolute;
+  z-index: 2;
+  top: 9px;
+  left: 50%;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #020307;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.grix-appetize-controls {
+  position: sticky;
+  top: 135px;
+  flex: 0 0 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 62px;
+  min-width: 62px;
+  max-height: min(76vh, 690px);
+  padding: .5rem 0;
+  overflow-y: auto;
+  border-radius: 7px;
+  background: #111d3c;
+  box-shadow: 0 3px 8px rgba(0,0,0,.12);
+}
+.grix-appetize-control {
+  display: grid;
+  flex: 0 0 48px;
+  width: 48px;
+  min-height: 48px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #b9c5dd;
+  cursor: pointer;
+}
+.grix-appetize-control span {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.grix-appetize-control:hover {
+  background: rgba(255,255,255,.12);
+  color: #fff;
+}
+.grix-appetize-control:focus-visible { outline: 2px solid #a8b7df; outline-offset: -2px; }
+.grix-appetize-control:disabled { opacity: .4; cursor: not-allowed; }
+.grix-appetize-input-area {
+  display: grid;
+  width: min(100%, 660px);
+  gap: .55rem;
+  margin: 1.1rem auto 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.grix-cloud-viewer-text-form {
+  width: 100%;
+  margin: 0 auto;
+}
+.grix-cloud-viewer-text-form input {
+  border-color: #d6d6d2;
+  background: #fff;
+  color: #182033;
+}
+.grix-appetize-input-area p {
+  color: #87909e;
+  font-size: .68rem;
+}
+.grix-appetize-devtools {
+  padding: 1rem clamp(1rem, 5vw, 2.5rem);
+  border-top: 1px solid #dadbdc;
+  background: #f8f9fb;
+  color: #263147;
+}
+.grix-appetize-devtools-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #687386;
+  font: 800 .65rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .1em;
+}
+.grix-appetize-devtools dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .8rem 1rem;
+  margin: .8rem 0 0;
+}
+.grix-appetize-devtools dl > div { min-width: 0; }
+.grix-appetize-devtools dt { color: #8a93a3; font-size: .65rem; }
+.grix-appetize-devtools dd {
+  margin: .2rem 0 0;
+  overflow-wrap: anywhere;
+  color: #37445b;
+  font-size: .76rem;
+  font-weight: 700;
+}
+@media (min-width: 900px) {
+  .grix-appetize-setting-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 76px;
+  }
+  .grix-appetize-device-area { padding-top: 1.8rem; }
+  .grix-appetize-phone-frame { width: min(36vw, 460px); }
+  .grix-appetize-controls { max-height: min(80vh, 730px); }
+}
+@media (max-width: 520px) {
+  .grix-appetize-header { min-height: 56px; padding: .55rem .8rem; }
+  .grix-appetize-brand { font-size: 1rem; }
+  .grix-appetize-connection { font-size: .5rem; }
+  .grix-appetize-close { font-size: .62rem; padding: .35rem .5rem; }
+  .grix-appetize-setting-row { padding: .85rem 1rem; }
+  .grix-appetize-setting-row small { display: none; }
+  .grix-appetize-phone-frame {
+    width: min(70vw, 500px);
+    border-width: 10px;
+    border-radius: 31px;
+    padding: 8px;
+  }
+  .grix-appetize-phone-frame video { border-radius: 19px; }
+  .grix-appetize-camera { top: 7px; width: 10px; height: 10px; }
+  .grix-appetize-controls { flex-basis: 46px; width: 46px; min-width: 46px; }
+  .grix-appetize-control { flex-basis: 42px; width: 42px; min-height: 42px; }
+  .grix-appetize-control span { font-size: 1.1rem; }
+  .grix-appetize-device-stage { gap: .45rem; }
+  .grix-appetize-devtools dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
