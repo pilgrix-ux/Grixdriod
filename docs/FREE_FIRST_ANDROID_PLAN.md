@@ -83,3 +83,17 @@ Before opening public sessions, implement per-user authorization, isolation, quo
 - No paid KVM host is required for the current development and CI stage.
 - Do not add paid APIs, paid emulator services, or secret-dependent deployment steps without an explicit decision.
 - Keep the public browser demo honest about the difference between the experimental ARM Lab and a real Android virtual device.
+
+## Cloud device manager foundation (November 19, 2026)
+
+- [x] Add account sign-up/sign-in and a Cloud Devices workspace to the website.
+- [x] Add owner-scoped device inventory, session metadata and provisioning requests.
+- [x] Add RLS policies that prevent browser users from changing runtime state or reading another user's devices.
+- [x] Keep worker identifiers, runtime handles and persistent-volume references in a private schema.
+- [x] Add a build-and-test workflow for the browser/Wasm application and Rust library.
+- [ ] Configure a dedicated GRIXDroid Supabase project and apply the migration.
+- [ ] Implement the authenticated worker claim/heartbeat API.
+- [ ] Enroll a persistent Android worker and verify that a device volume survives stop/start.
+- [ ] Add a short-lived, authenticated WebRTC streaming gateway and network isolation.
+
+The Cloud Devices page records account ownership and provisioning intent. Until the worker and control-plane API are connected, requests remain queued; the page does not claim to launch an Android device.
