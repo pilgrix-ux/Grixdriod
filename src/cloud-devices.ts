@@ -80,7 +80,19 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '  <div class="grix-cloud-viewer" id="grix-cloud-viewer" hidden>',
     '    <div class="grix-cloud-viewer-shell">',
     '      <div class="grix-cloud-viewer-toolbar"><strong id="grix-cloud-viewer-title">Android device</strong><button class="grix-cloud-secondary" id="grix-cloud-viewer-close" type="button">Close</button></div>',
-    '      <video id="grix-cloud-viewer-video" autoplay playsinline muted></video>',
+    '      <video id="grix-cloud-viewer-video" autoplay playsinline muted tabindex="0" aria-label="Android screen. Tap or swipe to control the device."></video>',
+    '      <div class="grix-cloud-viewer-controls">',
+    '        <div class="grix-cloud-viewer-nav" aria-label="Android navigation controls">',
+    '          <button class="grix-cloud-secondary" id="grix-cloud-action-back" type="button">Back</button>',
+    '          <button class="grix-cloud-secondary" id="grix-cloud-action-home" type="button">Home</button>',
+    '          <button class="grix-cloud-secondary" id="grix-cloud-action-recents" type="button">Recent apps</button>',
+    '        </div>',
+    '        <form id="grix-cloud-viewer-text-form" class="grix-cloud-viewer-text-form">',
+    '          <input id="grix-cloud-viewer-text" type="text" autocomplete="off" maxlength="120" placeholder="Type text into Android">',
+    '          <button class="grix-cloud-secondary" type="submit">Send</button>',
+    '        </form>',
+    '      </div>',
+    '      <p id="grix-cloud-viewer-input-status" role="status">Tap or swipe the screen to control Android. Use the buttons for navigation.</p>',
     '      <p id="grix-cloud-viewer-status" role="status">Connecting to the Android stream…</p>',
     '    </div>',
     '  </div>',
@@ -113,11 +125,16 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   const viewer = get<HTMLElement>('#grix-cloud-viewer');
   const viewerTitle = get<HTMLElement>('#grix-cloud-viewer-title');
   const viewerStatus = get<HTMLElement>('#grix-cloud-viewer-status');
+  const viewerInputStatus = get<HTMLElement>('#grix-cloud-viewer-input-status');
   const viewerVideo = get<HTMLVideoElement>('#grix-cloud-viewer-video');
+  const viewerTextForm = get<HTMLFormElement>('#grix-cloud-viewer-text-form');
+  const viewerTextInput = get<HTMLInputElement>('#grix-cloud-viewer-text');
 
   let viewerPeer: RTCPeerConnection | null = null;
   let viewerResource: string | null = null;
   let viewerToken: string | null = null;
+  let viewerDeviceId: string | null = null;
+  let pointerStart: { x: number; y: number; at: number } | null = null;
   let authMode: 'signin' | 'signup' = 'signin';
   let authSession: AuthSession | null = null;
   let busy = false;
@@ -158,6 +175,9 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     const token = viewerToken;
     viewerResource = null;
     viewerToken = null;
+    viewerDeviceId = null;
+    pointerStart = null;
+    viewerInputStatus.textContent = 'Tap or swipe the screen to control Android.';
     if (viewerPeer) viewerPeer.close();
     viewerPeer = null;
     viewerVideo.srcObject = null;
@@ -177,8 +197,10 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     if (device.state !== 'running' || device.stream_state !== 'ready') throw new Error('This Android device does not currently have a ready WebRTC stream.');
 
     await closeViewer();
+    viewerDeviceId = device.id;
     viewer.hidden = false;
     viewerTitle.textContent = device.name;
+    viewerInputStatus.textContent = 'Tap or swipe the screen to control Android. Use the buttons for navigation.';
     viewerStatus.textContent = 'Negotiating a secure WebRTC connection…';
     const token = await accessToken();
     const peer = new RTCPeerConnection();
@@ -221,6 +243,35 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       await closeViewer();
       throw error;
     }
+  }
+
+  function normalizedScreenPoint(event: PointerEvent): { x: number; y: number } | null {
+    const rect = viewerVideo.getBoundingClientRect();
+    const videoWidth = viewerVideo.videoWidth;
+    const videoHeight = viewerVideo.videoHeight;
+    if (!videoWidth || !videoHeight || !rect.width || !rect.height) return null;
+
+    // Account for the letterboxing caused by object-fit: contain.
+    const scale = Math.min(rect.width / videoWidth, rect.height / videoHeight);
+    const renderedWidth = videoWidth * scale;
+    const renderedHeight = videoHeight * scale;
+    const left = rect.left + (rect.width - renderedWidth) / 2;
+    const top = rect.top + (rect.height - renderedHeight) / 2;
+    const x = (event.clientX - left) / renderedWidth;
+    const y = (event.clientY - top) / renderedHeight;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+    return { x, y };
+  }
+
+  async function sendViewerCommand(command: Record<string, string | number>): Promise<void> {
+    if (!viewerDeviceId || !authSession) throw new Error('Open a signed-in Android device before sending input.');
+    viewerInputStatus.textContent = 'Sending input to Android…';
+    await restRequest<unknown>('/cloud_device_actions', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ device_id: viewerDeviceId, command }),
+    });
+    viewerInputStatus.textContent = 'Input queued for the Android worker.';
   }
 
   function responseMessage(payload: unknown): string {
@@ -492,7 +543,59 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     }
   });
 
-  get<HTMLButtonElement>('#grix-cloud-viewer-close').addEventListener('click', () => { void closeViewer(); });
+  viewerVideo.addEventListener('pointerdown', (event) => {
+    if (!viewerDeviceId) return;
+    const point = normalizedScreenPoint(event);
+    if (!point) return;
+    pointerStart = { ...point, at: Date.now() };
+    viewerVideo.setPointerCapture(event.pointerId);
+  });
+
+  viewerVideo.addEventListener('pointerup', (event) => {
+    const start = pointerStart;
+    pointerStart = null;
+    const end = normalizedScreenPoint(event);
+    if (!start || !end || !viewerDeviceId) return;
+
+    const distance = Math.hypot(end.x - start.x, end.y - start.y);
+    const durationMs = Math.max(80, Math.min(1500, Date.now() - start.at));
+    const command = distance > 0.02
+      ? { type: 'swipe', x: start.x, y: start.y, endX: end.x, endY: end.y, durationMs }
+      : { type: 'tap', x: end.x, y: end.y };
+
+    void sendViewerCommand(command).catch((error) => {
+      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Android input could not be sent.';
+    });
+  });
+
+  viewerVideo.addEventListener('pointercancel', () => { pointerStart = null; });
+  viewerVideo.addEventListener('lostpointercapture', () => { pointerStart = null; });
+
+  const navigationKeys: Array<[string, 'BACK' | 'HOME' | 'APP_SWITCH']> = [
+    ['#grix-cloud-action-back', 'BACK'],
+    ['#grix-cloud-action-home', 'HOME'],
+    ['#grix-cloud-action-recents', 'APP_SWITCH'],
+  ];
+  for (const [selector, key] of navigationKeys) {
+    get<HTMLButtonElement>(selector).addEventListener('click', () => {
+      void sendViewerCommand({ type: 'key', key }).catch((error) => {
+        viewerInputStatus.textContent = error instanceof Error ? error.message : 'Android navigation input could not be sent.';
+      });
+    });
+  }
+
+  viewerTextForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const text = viewerTextInput.value.trim();
+    if (!text) return;
+    void sendViewerCommand({ type: 'text', text }).then(() => {
+      viewerTextInput.value = '';
+    }).catch((error) => {
+      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Text could not be sent to Android.';
+    });
+  });
+
+    get<HTMLButtonElement>('#grix-cloud-viewer-close').addEventListener('click', () => { void closeViewer(); });
 
   get<HTMLButtonElement>('#grix-cloud-signout').addEventListener('click', async () => {
     await closeViewer();
