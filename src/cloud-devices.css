@@ -995,3 +995,36 @@
 .grix-appetize-phone-wrap[style*="--device-ratio: 16 / 9"] .grix-appetize-phone-frame {
   width: min(76vw, 640px);
 }
+
+
+/* Final white, minimal Appetize-inspired finish */
+.grix-cloud-viewer { background: #fff; color: #172033; }
+.grix-cloud-viewer-shell.grix-appetize-shell { background: #fff; }
+.grix-appetize-header { background: #111522; }
+.grix-appetize-settings { background: #fff; border-color: #e7e9ee; }
+.grix-appetize-setting-row { border-color: #e7e9ee; }
+.grix-appetize-setting-row strong { color: #475569; }
+.grix-appetize-setting-row small { color: #8993a4; }
+.grix-appetize-show-hide { background: #f7f8fa; }
+.grix-appetize-show-hide button { color: #596579; }
+.grix-appetize-show-hide button.selected {
+  border-color: #d4d9e2;
+  background: #e9edf3;
+  color: #172033;
+  box-shadow: none;
+}
+.grix-appetize-device-area { background: #fff; }
+.grix-appetize-app-title { color: #182033; }
+.grix-appetize-app-checkbox { border-color: #d1d7e0; }
+.grix-appetize-app-version { color: #8b96a8; }
+.grix-appetize-phone-frame { box-shadow: 0 8px 30px rgba(15,23,42,.12); }
+.grix-appetize-input-area p { color: #8b95a5; }
+.grix-appetize-devtools { background: #f8fafc; border-color: #e7e9ee; }
+.grix-appetize-control { color: #c4cee1; }
+.grix-appetize-control:hover { background: rgba(255,255,255,.1); }
+.grix-cloud-viewer-text-form input { border: 1px solid #dbe0e8; border-radius: 8px; }
+.grix-cloud-viewer-text-form button { border-radius: 8px; }
+@media (min-width: 900px) {
+  .grix-appetize-device-area { padding-top: 1.5rem; }
+  .grix-appetize-phone-frame { width: min(37vw, 460px); }
+}
