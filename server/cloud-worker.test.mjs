@@ -59,6 +59,22 @@ test('worker config clamps capacity and keeps its API loopback-only by default',
   assert.equal(config.systemImage, 'system-images;android-35;google_apis_playstore;x86_64');
 });
 
+test('worker config keeps the modern Supabase API key separate from its service-role JWT', () => {
+  const config = getWorkerConfig({
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_API_KEY: 'sb_secret_test_only',
+    SUPABASE_SERVICE_ROLE_JWT: 'legacy_service_role_jwt_test_only',
+  });
+  assert.equal(config.apiKey, 'sb_secret_test_only');
+  assert.equal(config.serviceRoleJwt, 'legacy_service_role_jwt_test_only');
+});
+
+test('worker config supports the legacy service-role key as a temporary fallback', () => {
+  const config = getWorkerConfig({ SUPABASE_SERVICE_ROLE_KEY: 'legacy_service_role_key_test_only' });
+  assert.equal(config.apiKey, 'legacy_service_role_key_test_only');
+  assert.equal(config.serviceRoleJwt, 'legacy_service_role_key_test_only');
+});
+
 test('worker config refuses unknown accelerator modes', () => {
   assert.throws(() => getWorkerConfig({ GRIXDROID_ACCEL: 'turbo' }), /must be auto, on or off/);
 });
