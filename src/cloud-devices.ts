@@ -78,22 +78,44 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '  <div class="grix-cloud-section-heading"><div><h3>Provisioning requests</h3><p>Requests stay attached to your account.</p></div></div>',
     '  <div class="grix-cloud-request-list" id="grix-cloud-request-list"><div class="grix-cloud-empty">No requests yet.</div></div>',
     '  <div class="grix-cloud-viewer" id="grix-cloud-viewer" hidden>',
-    '    <div class="grix-cloud-viewer-shell">',
-    '      <div class="grix-cloud-viewer-toolbar"><strong id="grix-cloud-viewer-title">Android device</strong><button class="grix-cloud-secondary" id="grix-cloud-viewer-close" type="button">Close</button></div>',
-    '      <video id="grix-cloud-viewer-video" autoplay playsinline muted tabindex="0" aria-label="Android screen. Tap or swipe to control the device."></video>',
-    '      <div class="grix-cloud-viewer-controls">',
-    '        <div class="grix-cloud-viewer-nav" aria-label="Android navigation controls">',
-    '          <button class="grix-cloud-secondary" id="grix-cloud-action-back" type="button">Back</button>',
-    '          <button class="grix-cloud-secondary" id="grix-cloud-action-home" type="button">Home</button>',
-    '          <button class="grix-cloud-secondary" id="grix-cloud-action-recents" type="button">Recent apps</button>',
+    '    <div class="grix-cloud-viewer-shell grix-appetize-shell" role="dialog" aria-modal="true" aria-label="GRIXDroid Android emulator">',
+    '      <aside class="grix-appetize-config">',
+    '        <div class="grix-appetize-panel-title">CONFIGURATION</div>',
+    '        <label>Device<input id="grix-cloud-device-model" value="Pixel 7" readonly></label>',
+    '        <label>OS<input id="grix-cloud-os-version" value="Android 15" readonly></label>',
+    '        <label>Scale<select id="grix-cloud-device-scale"><option value="auto">Auto</option><option value="75">75%</option><option value="90">90%</option><option value="100">100%</option></select></label>',
+    '        <div class="grix-appetize-toggle-row"><span>Show Device Controls</span><label class="grix-appetize-switch"><input id="grix-cloud-controls-toggle" type="checkbox" checked><span></span></label></div>',
+    '        <div class="grix-appetize-toggle-row"><span>Show Developer Tools</span><label class="grix-appetize-switch"><input id="grix-cloud-devtools-toggle" type="checkbox"><span></span></label></div>',
+    '        <div class="grix-appetize-config-note">Live Android device · Pixel 7 profile<br>Touch and navigation input are sent to the running emulator.</div>',
+    '      </aside>',
+    '      <main class="grix-appetize-stage" id="grix-cloud-stage">',
+    '        <header class="grix-appetize-stage-header"><div><span class="grix-appetize-live-dot"></span><strong id="grix-cloud-viewer-title">Android device</strong><small>LIVE DEVICE SESSION</small></div><button class="grix-cloud-secondary" id="grix-cloud-viewer-close" type="button">Close session</button></header>',
+    '        <div class="grix-appetize-canvas"><div class="grix-appetize-phone-wrap" id="grix-cloud-phone-wrap"><div class="grix-appetize-phone-frame"><span class="grix-appetize-camera" aria-hidden="true"></span><video id="grix-cloud-viewer-video" autoplay playsinline muted tabindex="0" aria-label="Live Android screen. Tap or swipe to control the device."></video></div><div class="grix-appetize-phone-caption">ANDROID VIRTUAL DEVICE</div></div></div>',
+    '        <div class="grix-appetize-input-area">',
+    '          <form id="grix-cloud-viewer-text-form" class="grix-cloud-viewer-text-form"><input id="grix-cloud-viewer-text" type="text" autocomplete="off" maxlength="120" placeholder="Type text into Android"><button class="grix-cloud-primary" type="submit">Send</button></form>',
+    '          <p id="grix-cloud-viewer-input-status" role="status">Tap or swipe the phone screen to control Android.</p>',
+    '          <p id="grix-cloud-viewer-status" role="status">Connecting to the Android stream…</p>',
     '        </div>',
-    '        <form id="grix-cloud-viewer-text-form" class="grix-cloud-viewer-text-form">',
-    '          <input id="grix-cloud-viewer-text" type="text" autocomplete="off" maxlength="120" placeholder="Type text into Android">',
-    '          <button class="grix-cloud-secondary" type="submit">Send</button>',
-    '        </form>',
-    '      </div>',
-    '      <p id="grix-cloud-viewer-input-status" role="status">Tap or swipe the screen to control Android. Use the buttons for navigation.</p>',
-    '      <p id="grix-cloud-viewer-status" role="status">Connecting to the Android stream…</p>',
+    '      </main>',
+    '      <aside class="grix-appetize-controls" id="grix-cloud-device-controls" aria-label="Android device controls">',
+    '        <button class="grix-appetize-control" id="grix-cloud-action-back" type="button" title="Back" aria-label="Back"><span>‹</span></button>',
+    '        <button class="grix-appetize-control" id="grix-cloud-action-home" type="button" title="Home" aria-label="Home"><span>⌂</span></button>',
+    '        <button class="grix-appetize-control" id="grix-cloud-action-recents" type="button" title="Recent apps" aria-label="Recent apps"><span>▤</span></button>',
+    '        <div class="grix-appetize-control-divider"></div>',
+    '        <button class="grix-appetize-control" id="grix-cloud-screenshot" type="button" title="Take screenshot" aria-label="Take screenshot"><span>▣</span></button>',
+    '        <div class="grix-appetize-controls-hint">DEVICE<br>CONTROLS</div>',
+    '      </aside>',
+    '      <section class="grix-appetize-devtools" id="grix-cloud-devtools" hidden aria-label="Android developer information">',
+    '        <div class="grix-appetize-devtools-title">DEVELOPER TOOLS <span>RUNTIME INSPECTOR</span></div>',
+    '        <dl>',
+    '          <div><dt>Virtual device</dt><dd id="grix-cloud-detail-device">Pixel 7</dd></div>',
+    '          <div><dt>Android version</dt><dd id="grix-cloud-detail-android">Android 15</dd></div>',
+    '          <div><dt>Profile</dt><dd id="grix-cloud-detail-profile">Standard</dd></div>',
+    '          <div><dt>Device state</dt><dd id="grix-cloud-detail-state">Running</dd></div>',
+    '          <div><dt>Stream</dt><dd id="grix-cloud-detail-stream">WebRTC</dd></div>',
+    '          <div><dt>Storage</dt><dd id="grix-cloud-detail-storage">Persistent</dd></div>',
+    '        </dl>',
+    '      </section>',
     '    </div>',
     '  </div>',
     '</div>',
@@ -200,7 +222,21 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     viewerDeviceId = device.id;
     viewer.hidden = false;
     viewerTitle.textContent = device.name;
-    viewerInputStatus.textContent = 'Tap or swipe the screen to control Android. Use the buttons for navigation.';
+    get<HTMLInputElement>('#grix-cloud-device-model').value = 'Pixel 7';
+    get<HTMLInputElement>('#grix-cloud-os-version').value = device.android_release ? 'Android ' + device.android_release : 'Android 15';
+    get<HTMLElement>('#grix-cloud-detail-device').textContent = 'Pixel 7 · ' + device.name;
+    get<HTMLElement>('#grix-cloud-detail-android').textContent = device.android_release ? 'Android ' + device.android_release : 'Not reported';
+    get<HTMLElement>('#grix-cloud-detail-profile').textContent = device.profile;
+    get<HTMLElement>('#grix-cloud-detail-state').textContent = device.state;
+    get<HTMLElement>('#grix-cloud-detail-stream').textContent = device.stream_state;
+    get<HTMLElement>('#grix-cloud-detail-storage').textContent = device.storage_state;
+    get<HTMLInputElement>('#grix-cloud-controls-toggle').checked = true;
+    get<HTMLInputElement>('#grix-cloud-devtools-toggle').checked = false;
+    get<HTMLElement>('#grix-cloud-device-controls').hidden = false;
+    get<HTMLElement>('#grix-cloud-devtools').hidden = true;
+    get<HTMLSelectElement>('#grix-cloud-device-scale').value = 'auto';
+    get<HTMLElement>('#grix-cloud-phone-wrap').style.setProperty('--device-scale', '1');
+    viewerInputStatus.textContent = 'Tap or swipe the phone screen to control Android.';
     viewerStatus.textContent = 'Negotiating a secure WebRTC connection…';
     const token = await accessToken();
     const peer = new RTCPeerConnection();
@@ -541,6 +577,51 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Unable to refresh devices.', 'error');
     }
+  });
+
+  get<HTMLInputElement>('#grix-cloud-controls-toggle').addEventListener('change', (event) => {
+    const input = event.currentTarget as HTMLInputElement;
+    get<HTMLElement>('#grix-cloud-device-controls').hidden = !input.checked;
+  });
+
+  get<HTMLInputElement>('#grix-cloud-devtools-toggle').addEventListener('change', (event) => {
+    const input = event.currentTarget as HTMLInputElement;
+    get<HTMLElement>('#grix-cloud-devtools').hidden = !input.checked;
+  });
+
+  get<HTMLSelectElement>('#grix-cloud-device-scale').addEventListener('change', (event) => {
+    const value = (event.currentTarget as HTMLSelectElement).value;
+    const scale = value === 'auto' ? 1 : Number(value) / 100;
+    get<HTMLElement>('#grix-cloud-phone-wrap').style.setProperty('--device-scale', String(scale));
+  });
+
+  get<HTMLButtonElement>('#grix-cloud-screenshot').addEventListener('click', () => {
+    if (!viewerVideo.videoWidth || !viewerVideo.videoHeight) {
+      viewerInputStatus.textContent = 'The Android display is not ready for a screenshot yet.';
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = viewerVideo.videoWidth;
+    canvas.height = viewerVideo.videoHeight;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      viewerInputStatus.textContent = 'Screenshot capture is not supported by this browser.';
+      return;
+    }
+    context.drawImage(viewerVideo, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        viewerInputStatus.textContent = 'Could not create the Android screenshot.';
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'grixdroid-android-screenshot.png';
+      link.click();
+      URL.revokeObjectURL(url);
+      viewerInputStatus.textContent = 'Screenshot captured from the live Android screen.';
+    }, 'image/png');
   });
 
   viewerVideo.addEventListener('pointerdown', (event) => {
