@@ -66,7 +66,7 @@ export function getWorkerConfig(env = process.env) {
     scrcpyServerPath: env.SCRCPY_SERVER_PATH || '',
     scrcpyVersion: env.SCRCPY_VERSION || '',
     ffmpeg: env.FFMPEG_PATH || 'ffmpeg',
-    whipBaseUrl: (env.GRIXDROID_WHIP_BASE_URL || '').replace(/\\/+$/, ''),
+    whipBaseUrl: (env.GRIXDROID_WHIP_BASE_URL || '').replace(/\/+$/, ''),
     streamPublishToken: env.GRIXDROID_STREAM_PUBLISH_TOKEN || '',
     accel,
     gpu: env.GRIXDROID_GPU_MODE || 'software',
@@ -348,7 +348,7 @@ async function startWebRTCStream(config, meta) {
   await delay(800);
   if (scrcpy.exitCode !== null) throw new Error('scrcpy-server exited before the H.264 stream opened.');
 
-  const whipUrl = config.whipBaseUrl.replace(/\\/+$/, '') + '/' + meta.cloudDeviceId + '/whip';
+  const whipUrl = config.whipBaseUrl.replace(/\/+$/, '') + '/' + meta.cloudDeviceId + '/whip';
   const input = 'tcp://127.0.0.1:' + streamPort + '?tcp_nodelay=1';
   const ffmpegArgs = [
     '-hide_banner', '-loglevel', 'warning',
