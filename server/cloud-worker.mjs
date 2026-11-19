@@ -380,7 +380,13 @@ async function verifyAvdImage(config, meta) {
   const actual = match ? match[1].trim().replace(/\\/g, '/').replace(/\/+$/, '') : '';
   const expected = image.relativePath.replace(/\\/g, '/');
   if (!actual || !actual.endsWith(expected)) {
-    throw new Error('Existing AVD ' + meta.avdName + ' was created from a different Android system image. Back up its data and provision a new device to change image targets.');
+    throw new Error(
+      'Existing AVD ' + meta.avdName + ' was created from a different Android system image. ' +
+      'Found image.sysdir.1=' + (actual || '(missing)') +
+      '; expected a path ending in ' + expected +
+      '; config=' + configFile +
+      '. Back up its data and provision a new device to change image targets.'
+    );
   }
 }
 
