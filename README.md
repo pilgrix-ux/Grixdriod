@@ -38,7 +38,7 @@ To configure the workspace, copy `.env.example` to `.env.local`, set `VITE_SUPAB
 
 ## Self-hosted Android worker
 
-The experimental cloud worker can boot a separate Android Emulator AVD for each queued device request. It needs a persistent host with Android SDK Command-line Tools, Emulator, Platform Tools, a downloaded system image and durable storage.
+The cloud worker boots a genuine Android Emulator system image—not the browser-native ARM/Dalvik research runtime—for each queued device request. By default it uses Android 15 (API 35) with Google Play Store and Google Play services. It needs a persistent host with Android SDK Command-line Tools, Emulator, Platform Tools, the exact system image and durable storage. On boot it verifies Android system properties and the expected packages before reporting the device as ready.
 
 ```bash
 cp .env.worker.example .env.worker
@@ -48,7 +48,7 @@ npm ci
 npm run device-worker
 ```
 
-Apply all three Supabase migrations in order before starting the worker. For optional WebRTC, configure the matching scrcpy server JAR, an FFmpeg build with the WHIP muxer, the MediaMTX host and the signed-in viewer endpoint; see [WebRTC streaming setup](docs/WEBRTC_STREAMING.md). For a Linux host without KVM, software CPU emulation is an explicit development-only option and is very slow; see [the worker setup guide](docs/CLOUD_DEVICE_ARCHITECTURE.md). The worker API defaults to loopback and is not directly exposed to website visitors.
+Install the image with `sdkmanager --licenses` and `sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis_playstore;x86_64"` before starting the worker. Google Play-enabled hosted sessions need a separate terms review; GRIXDroid does not redistribute Google packages. Apply all three Supabase migrations in order before starting the worker. For optional WebRTC, configure the matching scrcpy server JAR, an FFmpeg build with the WHIP muxer, the MediaMTX host and the signed-in viewer endpoint; see [WebRTC streaming setup](docs/WEBRTC_STREAMING.md). For a Linux host without KVM, software CPU emulation is an explicit development-only option and is very slow; see [the worker setup guide](docs/CLOUD_DEVICE_ARCHITECTURE.md). The worker API defaults to loopback and is not directly exposed to website visitors.
 
 ## Real Android web integration
 
@@ -69,7 +69,7 @@ This bridge controls an existing phone or emulator; it does not create a persist
 
 GRIXDroid includes an optional real-Android smoke test using a temporary GitHub-hosted macOS runner. macOS uses Apple's Hypervisor.framework, so this development workflow does not require renting a Linux KVM machine.
 
-Run it from **Actions → Android Emulator Smoke (Free macOS) → Run workflow**. It boots an Android API 35 virtual device using Google's `google_apis_playstore` system image, verifies that Play Store and Google Play services are installed, launches the Play Store UI without a personal account, and saves a short-lived screenshot/log artifact.
+Run it from **Actions → Android Emulator Smoke (Free macOS) → Run workflow**. It boots an Android API 35 virtual device using Google's `google_apis_playstore` system image, verifies Android Settings, Play Store and Google Play services, launches the Store UI without a personal account, then stops and restarts the same AVD to verify a value in Android's Settings database survives. It saves a short-lived evidence artifact.
 
 This is an automated CI test, **not** an always-on cloud phone or a public streaming service. Standard GitHub-hosted runners are free for public repositories; see [GitHub Actions billing](https://docs.github.com/en/actions/concepts/billing-and-usage). The distinction between the temporary test emulator, private ADB bridge and a future persistent device host is documented in [the free-first Android plan](docs/FREE_FIRST_ANDROID_PLAN.md).
 
