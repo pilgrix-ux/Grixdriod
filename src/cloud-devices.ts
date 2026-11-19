@@ -89,7 +89,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '        <div class="grix-appetize-setting-row"><div><strong>Show Developer Tools</strong><small>Android version, screen, storage and stream details</small></div><div class="grix-appetize-show-hide"><button id="grix-cloud-devtools-show" type="button">Show</button><button id="grix-cloud-devtools-hide" class="selected" type="button">Hide</button></div></div>',
     '      </section>',
     '      <section class="grix-appetize-device-area">',
-    '        <div class="grix-appetize-app-title"><span class="grix-appetize-app-checkbox"></span><strong id="grix-cloud-viewer-title">Website Preview</strong><span class="grix-appetize-app-version">Android</span></div>',
+    '        <div class="grix-appetize-app-title"><span class="grix-appetize-app-checkbox"></span><strong id="grix-cloud-viewer-title">Website Preview</strong><span class="grix-appetize-app-version">v1.0</span></div>',
     '        <div class="grix-appetize-device-stage">',
     '          <div class="grix-appetize-phone-wrap" id="grix-cloud-phone-wrap">',
     '            <div class="grix-appetize-phone-frame"><span class="grix-appetize-camera" aria-hidden="true"></span><video id="grix-cloud-viewer-video" autoplay playsinline muted tabindex="0" aria-label="Live Android phone screen. Tap or swipe to control Android."></video></div>',
