@@ -422,6 +422,15 @@ async function loadPersistedDevices(config, instances) {
           meta.androidRelease = boot.androidRelease;
           meta.resolution = boot.resolution;
         }
+      } else {
+        await callRpc(config, 'grixdroid_set_device_state', {
+          p_device_id: meta.cloudDeviceId,
+          p_worker_id: config.workerId,
+          p_state: 'stopped',
+          p_android_release: meta.androidRelease || null,
+          p_storage_bytes: null,
+        }).catch(() => {});
+        await persistMeta(meta).catch(() => {});
       }
       instances.set(meta.cloudDeviceId, meta);
     } catch {
