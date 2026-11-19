@@ -36,6 +36,36 @@ jobs:
       - name: Check out GRIXDroid
         uses: actions/checkout@v4
 
+      - name: Ensure Android SDK command-line tools are installed
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          if [ -z "$SDK_ROOT" ]; then
+            echo "The runner did not expose ANDROID_SDK_ROOT or ANDROID_HOME."
+            exit 1
+          fi
+
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager -print -quit 2>/dev/null || true)"
+          fi
+          if [ -z "$SDKMANAGER" ]; then
+            echo "Could not find sdkmanager under $SDK_ROOT/cmdline-tools."
+            find "$SDK_ROOT" -maxdepth 5 -type f -name sdkmanager -print || true
+            exit 1
+          fi
+
+          "$SDKMANAGER" --install "cmdline-tools;latest"
+          AVDMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/avdmanager"
+          if [ ! -x "$AVDMANAGER" ]; then
+            echo "Android SDK package installation completed, but avdmanager is still missing."
+            find "$SDK_ROOT/cmdline-tools" -maxdepth 5 -type f -name avdmanager -print || true
+            exit 1
+          fi
+          echo "AVDMANAGER_PATH=$AVDMANAGER" >> "$GITHUB_ENV"
+          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+
       - name: Validate worker scripts before booting Android
         run: |
           node --check server/cloud-worker.mjs
