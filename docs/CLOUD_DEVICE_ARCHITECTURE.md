@@ -93,16 +93,18 @@ The worker API is not the public customer session gateway. Keep it on loopback o
 
 ### Database setup
 
-The dedicated Supabase project is **Grix emulator**. It is active, and all four migrations below are recorded in its migration history. Keep these files in sync with the database history; do not reapply them under different versions:
+The dedicated Supabase project is **Grix emulator**. It is active, and all six GRIXDroid migrations below are recorded in its migration history. Keep these files in sync with the database history:
 
 1. `supabase/migrations/20261119175734_grixdroid_cloud_devices.sql`
 2. `supabase/migrations/20261119175837_grixdroid_worker_queue.sql`
 3. `supabase/migrations/20261119175841_grixdroid_webrtc_streams.sql`
 4. `supabase/migrations/20261119192634_grixdroid_device_controls.sql`
+5. `supabase/migrations/20261119200000_grixdroid_apk_install_tools.sql`
+6. `supabase/migrations/20261119201000_grixdroid_apk_owner_read_policy.sql`
 
-The worker-queue migration adds service-role-only RPCs for heartbeat, atomic provisioning claims, lease renewal, completion/failure and device-state changes. The device-controls migration adds an owner-scoped input queue and service-role-only claim/finish RPCs. Both migrations check the role claim and revoke execute permission from `public`, `anon` and `authenticated`.
+The worker-queue migration adds service-role-only RPCs for heartbeat, atomic provisioning claims, lease renewal, completion/failure and device-state changes. The device-controls migration adds an owner-scoped command queue. The APK-install migration adds a private `grixdroid-apks` bucket (50 MB per APK), per-account folder policies, APK-install commands and a worker claim RPC that returns the owning user ID. The owner-read policy allows a signed-in user to inspect only their own APK objects. Worker RPCs remain service-role-only and are not callable by `anon` or `authenticated`.
 
-Do not apply these migrations to the unrelated Pilgrix Android or GRIX CODE projects. The dedicated GRIXDroid database is already configured; the remaining deployment requirement is a persistent Android worker and streaming host.
+Do not apply these migrations to the unrelated Pilgrix Android or GRIX CODE projects. The dedicated GRIXDroid database is already configured. A persistent Android worker and an HTTPS WebRTC gateway still have to be enrolled for public live sessions.
 
 ### Worker host setup
 
