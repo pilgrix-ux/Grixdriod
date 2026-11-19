@@ -19,9 +19,44 @@ test('normalizes swipe duration and validates every coordinate', () => {
   assert.throws(() => validateAction({ type: 'swipe', x: 0, y: 0, endX: 2, endY: 1 }), /between 0 and 1/);
 });
 
-test('accepts only the small Android navigation key allowlist', () => {
+test('accepts only the Android navigation and power key allowlist', () => {
   assert.deepEqual(validateAction({ type: 'key', key: 'HOME' }), { type: 'key', key: 'HOME', code: '3' });
-  assert.throws(() => validateAction({ type: 'key', key: 'POWER' }), /Supported keys/);
+  assert.deepEqual(validateAction({ type: 'key', key: 'POWER' }), { type: 'key', key: 'POWER', code: '26' });
+  assert.throws(() => validateAction({ type: 'key', key: 'SHELL' }), /Supported keys/);
+});
+
+test('validates Android rotation, dark mode and font-size controls', () => {
+  assert.deepEqual(validateAction({ type: 'rotate', orientation: 'landscape' }), { type: 'rotate', orientation: 'landscape' });
+  assert.throws(() => validateAction({ type: 'rotate', orientation: 'upside-down' }), /portrait or landscape/);
+  assert.deepEqual(validateAction({ type: 'night_mode', enabled: true }), { type: 'night_mode', enabled: true });
+  assert.throws(() => validateAction({ type: 'night_mode', enabled: 'yes' }), /true or false/);
+  assert.deepEqual(validateAction({ type: 'font_scale', scale: 1.15 }), { type: 'font_scale', scale: 1.15 });
+  assert.throws(() => validateAction({ type: 'font_scale', scale: 2 }), /between 0.85 and 1.3/);
+});
+
+test('validates private APK storage paths and file names', () => {
+  const uid = '11111111-1111-4111-8111-111111111111';
+  const device = '22222222-2222-4222-8222-222222222222';
+  const id = '33333333-3333-4333-8333-333333333333';
+  assert.deepEqual(validateAction({
+    type: 'install_apk',
+    object_path: uid + '/' + device + '/' + id + '.apk',
+    filename: 'demo.apk',
+  }), {
+    type: 'install_apk',
+    object_path: uid + '/' + device + '/' + id + '.apk',
+    filename: 'demo.apk',
+  });
+  assert.throws(() => validateAction({
+    type: 'install_apk',
+    object_path: uid + '/../' + id + '.apk',
+    filename: 'demo.apk',
+  }), /storage path is invalid/);
+  assert.throws(() => validateAction({
+    type: 'install_apk',
+    object_path: uid + '/' + device + '/' + id + '.apk',
+    filename: 'demo; reboot.apk',
+  }), /valid .apk filename/);
 });
 
 test('text action rejects shell metacharacters and escapes spaces for Android input', () => {
