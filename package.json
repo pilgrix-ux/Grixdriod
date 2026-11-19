@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "cargo test --lib",
     "device-bridge": "node server/adb-bridge.mjs",
-    "device-worker": "node server/cloud-worker.mjs",
+    "device-worker": "node --env-file=.env.worker server/cloud-worker.mjs",
     "test:worker": "node --test server/*.test.mjs"
   },
   "devDependencies": {
