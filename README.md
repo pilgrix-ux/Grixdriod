@@ -21,13 +21,28 @@ GRIXDroid is **not a complete Android operating system** and is not a general-pu
 
 The APK runner supports only a narrow subset of DEX instructions and framework calls. Treat this as a systems research prototype, not a replacement for the Android Emulator or a real Android device.
 
+## Real Android web integration
+
+The website now includes a **Real Android device** panel. It connects to an Android phone or an already-running Android Emulator through the private ADB bridge in `server/adb-bridge.mjs`.
+
+Start it on a computer with Node.js 20+, Android Platform Tools and an authorized Android device:
+
+```bash
+npm install
+npm run device-bridge
+```
+
+Then use the website panel with `http://127.0.0.1:8787` from that same computer. The panel supports screen mirroring, taps/swipes, navigation keys, APK installation, installed-app launching and logcat. It detects Google Play Store on the attached Android system and offers an Open Google Play Store control when present. See [web device integration setup](docs/WEB_DEVICE_INTEGRATION.md).
+
+This bridge controls an existing phone or emulator; it does not create a persistent cloud phone. The bridge is loopback-only by default. Remote access requires explicit token, HTTPS, origin and network configuration. Never put a shared production bridge token in the public frontend.
+
 ## No-cost Android emulator development
 
 GRIXDroid includes an optional real-Android smoke test using a temporary GitHub-hosted macOS runner. macOS uses Apple's Hypervisor.framework, so this development workflow does not require renting a Linux KVM machine.
 
 Run it from **Actions → Android Emulator Smoke (Free macOS) → Run workflow**. It boots an Android API 35 virtual device using Google's `google_apis_playstore` system image, verifies that Play Store and Google Play services are installed, launches the Play Store UI without a personal account, and saves a short-lived screenshot/log artifact.
 
-This is an automated CI test, **not** an always-on cloud phone or a public streaming service. Standard GitHub-hosted runners are free for public repositories; see [GitHub Actions billing](https://docs.github.com/en/actions/concepts/billing-and-usage). The distinction between the temporary test emulator and a future persistent device host is documented in [the free-first Android plan](docs/FREE_FIRST_ANDROID_PLAN.md).
+This is an automated CI test, **not** an always-on cloud phone or a public streaming service. Standard GitHub-hosted runners are free for public repositories; see [GitHub Actions billing](https://docs.github.com/en/actions/concepts/billing-and-usage). The distinction between the temporary test emulator, private ADB bridge and a future persistent device host is documented in [the free-first Android plan](docs/FREE_FIRST_ANDROID_PLAN.md).
 
 ## Run locally
 
