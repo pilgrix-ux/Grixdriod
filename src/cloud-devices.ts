@@ -78,35 +78,44 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '  <div class="grix-cloud-section-heading"><div><h3>Provisioning requests</h3><p>Requests stay attached to your account.</p></div></div>',
     '  <div class="grix-cloud-request-list" id="grix-cloud-request-list"><div class="grix-cloud-empty">No requests yet.</div></div>',
     '  <div class="grix-cloud-viewer" id="grix-cloud-viewer" hidden>',
-    '    <div class="grix-cloud-viewer-shell grix-appetize-shell" role="dialog" aria-modal="true" aria-label="GRIXDroid Android emulator">',
-    '      <aside class="grix-appetize-config">',
-    '        <div class="grix-appetize-panel-title">CONFIGURATION</div>',
-    '        <label>Device<input id="grix-cloud-device-model" value="Pixel 7" readonly></label>',
-    '        <label>OS<input id="grix-cloud-os-version" value="Android 15" readonly></label>',
-    '        <label>Scale<select id="grix-cloud-device-scale"><option value="auto">Auto</option><option value="75">75%</option><option value="90">90%</option><option value="100">100%</option></select></label>',
-    '        <div class="grix-appetize-toggle-row"><span>Show Device Controls</span><label class="grix-appetize-switch"><input id="grix-cloud-controls-toggle" type="checkbox" checked><span></span></label></div>',
-    '        <div class="grix-appetize-toggle-row"><span>Show Developer Tools</span><label class="grix-appetize-switch"><input id="grix-cloud-devtools-toggle" type="checkbox"><span></span></label></div>',
-    '        <div class="grix-appetize-config-note">Live Android device · Pixel 7 profile<br>Touch and navigation input are sent to the running emulator.</div>',
-    '      </aside>',
-    '      <main class="grix-appetize-stage" id="grix-cloud-stage">',
-    '        <header class="grix-appetize-stage-header"><div><span class="grix-appetize-live-dot"></span><strong id="grix-cloud-viewer-title">Android device</strong><small>LIVE DEVICE SESSION</small></div><button class="grix-cloud-secondary" id="grix-cloud-viewer-close" type="button">Close session</button></header>',
-    '        <div class="grix-appetize-canvas"><div class="grix-appetize-phone-wrap" id="grix-cloud-phone-wrap"><div class="grix-appetize-phone-frame"><span class="grix-appetize-camera" aria-hidden="true"></span><video id="grix-cloud-viewer-video" autoplay playsinline muted tabindex="0" aria-label="Live Android screen. Tap or swipe to control the device."></video></div><div class="grix-appetize-phone-caption">ANDROID VIRTUAL DEVICE</div></div></div>',
+    '    <div class="grix-cloud-viewer-shell grix-appetize-shell" role="dialog" aria-modal="true" aria-label="GRIXDroid live Android device">',
+    '      <header class="grix-appetize-header">',
+    '        <div class="grix-appetize-brand"><span class="grix-appetize-brand-mark">G</span><strong>GRIXDROID</strong></div>',
+    '        <div class="grix-appetize-header-actions"><span class="grix-appetize-connection"><i></i> LIVE SESSION</span><button id="grix-cloud-viewer-menu" class="grix-appetize-menu" type="button" aria-label="Toggle session settings">☰</button><button class="grix-appetize-close" id="grix-cloud-viewer-close" type="button">Close</button></div>',
+    '      </header>',
+    '      <section class="grix-appetize-settings" id="grix-cloud-session-settings">',
+    '        <div class="grix-appetize-setting-row"><div><strong>Show Device Controls</strong><small>Power, navigation, rotation and device tools</small></div><div class="grix-appetize-show-hide"><button id="grix-cloud-controls-show" class="selected" type="button">Show</button><button id="grix-cloud-controls-hide" type="button">Hide</button></div></div>',
+    '        <div class="grix-appetize-setting-row"><div><strong>Show Developer Tools</strong><small>Android version, screen, storage and stream details</small></div><div class="grix-appetize-show-hide"><button id="grix-cloud-devtools-show" type="button">Show</button><button id="grix-cloud-devtools-hide" class="selected" type="button">Hide</button></div></div>',
+    '      </section>',
+    '      <section class="grix-appetize-device-area">',
+    '        <div class="grix-appetize-app-title"><span class="grix-appetize-app-checkbox"></span><strong id="grix-cloud-viewer-title">Website Preview</strong><span class="grix-appetize-app-version">Android</span></div>',
+    '        <div class="grix-appetize-device-stage">',
+    '          <div class="grix-appetize-phone-wrap" id="grix-cloud-phone-wrap">',
+    '            <div class="grix-appetize-phone-frame"><span class="grix-appetize-camera" aria-hidden="true"></span><video id="grix-cloud-viewer-video" autoplay playsinline muted tabindex="0" aria-label="Live Android phone screen. Tap or swipe to control Android."></video></div>',
+    '          </div>',
+    '          <aside class="grix-appetize-controls" id="grix-cloud-device-controls" aria-label="Android device controls">',
+    '            <button class="grix-appetize-control" id="grix-cloud-action-home" type="button" title="Home" aria-label="Home"><span>⌂</span></button>',
+    '            <button class="grix-appetize-control" id="grix-cloud-action-power" type="button" title="Lock or wake" aria-label="Lock or wake"><span>♙</span></button>',
+    '            <button class="grix-appetize-control" id="grix-cloud-screenshot" type="button" title="Take screenshot" aria-label="Take screenshot"><span>▣</span></button>',
+    '            <button class="grix-appetize-control" id="grix-cloud-action-rotate" type="button" title="Rotate screen" aria-label="Rotate screen"><span>↻</span></button>',
+    '            <button class="grix-appetize-control" id="grix-cloud-action-edit" type="button" title="Type text" aria-label="Type text"><span>✎</span></button>',
+    '            <button class="grix-appetize-control" id="grix-cloud-action-language" type="button" title="Language details" aria-label="Language details"><span>文</span></button>',
+    '            <button class="grix-appetize-control" id="grix-cloud-action-night" type="button" title="Toggle dark mode" aria-label="Toggle dark mode"><span>☾</span></button>',
+    '            <button class="grix-appetize-control" id="grix-cloud-action-font" type="button" title="Change text size" aria-label="Change text size"><span>Tt</span></button>',
+    '            <button class="grix-appetize-control" id="grix-cloud-action-vibrate" type="button" title="Vibrate device" aria-label="Vibrate device"><span>▥</span></button>',
+    '            <button class="grix-appetize-control" id="grix-cloud-action-upload" type="button" title="Install APK" aria-label="Install APK"><span>⇧</span></button>',
+    '            <button class="grix-appetize-control" id="grix-cloud-action-fingerprint" type="button" title="Simulate fingerprint" aria-label="Simulate fingerprint"><span>◎</span></button>',
+    '            <input id="grix-cloud-apk-input" type="file" accept=".apk,application/vnd.android.package-archive" hidden>',
+    '          </aside>',
+    '        </div>',
     '        <div class="grix-appetize-input-area">',
     '          <form id="grix-cloud-viewer-text-form" class="grix-cloud-viewer-text-form"><input id="grix-cloud-viewer-text" type="text" autocomplete="off" maxlength="120" placeholder="Type text into Android"><button class="grix-cloud-primary" type="submit">Send</button></form>',
     '          <p id="grix-cloud-viewer-input-status" role="status">Tap or swipe the phone screen to control Android.</p>',
     '          <p id="grix-cloud-viewer-status" role="status">Connecting to the Android stream…</p>',
     '        </div>',
-    '      </main>',
-    '      <aside class="grix-appetize-controls" id="grix-cloud-device-controls" aria-label="Android device controls">',
-    '        <button class="grix-appetize-control" id="grix-cloud-action-back" type="button" title="Back" aria-label="Back"><span>‹</span></button>',
-    '        <button class="grix-appetize-control" id="grix-cloud-action-home" type="button" title="Home" aria-label="Home"><span>⌂</span></button>',
-    '        <button class="grix-appetize-control" id="grix-cloud-action-recents" type="button" title="Recent apps" aria-label="Recent apps"><span>▤</span></button>',
-    '        <div class="grix-appetize-control-divider"></div>',
-    '        <button class="grix-appetize-control" id="grix-cloud-screenshot" type="button" title="Take screenshot" aria-label="Take screenshot"><span>▣</span></button>',
-    '        <div class="grix-appetize-controls-hint">DEVICE<br>CONTROLS</div>',
-    '      </aside>',
+    '      </section>',
     '      <section class="grix-appetize-devtools" id="grix-cloud-devtools" hidden aria-label="Android developer information">',
-    '        <div class="grix-appetize-devtools-title">DEVELOPER TOOLS <span>RUNTIME INSPECTOR</span></div>',
+    '        <div class="grix-appetize-devtools-title">DEVELOPER TOOLS <span>LIVE RUNTIME INSPECTOR</span></div>',
     '        <dl>',
     '          <div><dt>Virtual device</dt><dd id="grix-cloud-detail-device">Pixel 7</dd></div>',
     '          <div><dt>Android version</dt><dd id="grix-cloud-detail-android">Android 15</dd></div>',
@@ -222,8 +231,15 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     viewerDeviceId = device.id;
     viewer.hidden = false;
     viewerTitle.textContent = device.name;
-    get<HTMLInputElement>('#grix-cloud-device-model').value = 'Pixel 7';
-    get<HTMLInputElement>('#grix-cloud-os-version').value = device.android_release ? 'Android ' + device.android_release : 'Android 15';
+    get<HTMLElement>('#grix-cloud-session-settings').hidden = false;
+    get<HTMLElement>('#grix-cloud-device-controls').hidden = false;
+    get<HTMLElement>('#grix-cloud-devtools').hidden = true;
+    get<HTMLButtonElement>('#grix-cloud-controls-show').classList.add('selected');
+    get<HTMLButtonElement>('#grix-cloud-controls-hide').classList.remove('selected');
+    get<HTMLButtonElement>('#grix-cloud-devtools-show').classList.remove('selected');
+    get<HTMLButtonElement>('#grix-cloud-devtools-hide').classList.add('selected');
+    get<HTMLElement>('#grix-cloud-phone-wrap').style.setProperty('--device-scale', '1');
+    get<HTMLElement>('#grix-cloud-viewer-menu').setAttribute('aria-expanded', 'true');
     get<HTMLElement>('#grix-cloud-detail-device').textContent = 'Pixel 7 · ' + device.name;
     get<HTMLElement>('#grix-cloud-detail-android').textContent = device.android_release ? 'Android ' + device.android_release : 'Not reported';
     get<HTMLElement>('#grix-cloud-detail-profile').textContent = device.profile;
@@ -579,20 +595,18 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     }
   });
 
-  get<HTMLInputElement>('#grix-cloud-controls-toggle').addEventListener('change', (event) => {
-    const input = event.currentTarget as HTMLInputElement;
-    get<HTMLElement>('#grix-cloud-device-controls').hidden = !input.checked;
-  });
-
-  get<HTMLInputElement>('#grix-cloud-devtools-toggle').addEventListener('change', (event) => {
-    const input = event.currentTarget as HTMLInputElement;
-    get<HTMLElement>('#grix-cloud-devtools').hidden = !input.checked;
-  });
-
-  get<HTMLSelectElement>('#grix-cloud-device-scale').addEventListener('change', (event) => {
-    const value = (event.currentTarget as HTMLSelectElement).value;
-    const scale = value === 'auto' ? 1 : Number(value) / 100;
-    get<HTMLElement>('#grix-cloud-phone-wrap').style.setProperty('--device-scale', String(scale));
+  const setShowHide = (showId: string, hideId: string, panelId: string, visible: boolean) => {
+    get<HTMLElement>('#' + panelId).hidden = !visible;
+    get<HTMLButtonElement>('#' + showId).classList.toggle('selected', visible);
+    get<HTMLButtonElement>('#' + hideId).classList.toggle('selected', !visible);
+  };
+  get<HTMLButtonElement>('#grix-cloud-controls-show').addEventListener('click', () => setShowHide('grix-cloud-controls-show', 'grix-cloud-controls-hide', 'grix-cloud-device-controls', true));
+  get<HTMLButtonElement>('#grix-cloud-controls-hide').addEventListener('click', () => setShowHide('grix-cloud-controls-show', 'grix-cloud-controls-hide', 'grix-cloud-device-controls', false));
+  get<HTMLButtonElement>('#grix-cloud-devtools-show').addEventListener('click', () => setShowHide('grix-cloud-devtools-show', 'grix-cloud-devtools-hide', 'grix-cloud-devtools', true));
+  get<HTMLButtonElement>('#grix-cloud-devtools-hide').addEventListener('click', () => setShowHide('grix-cloud-devtools-show', 'grix-cloud-devtools-hide', 'grix-cloud-devtools', false));
+  get<HTMLButtonElement>('#grix-cloud-viewer-menu').addEventListener('click', () => {
+    const settings = get<HTMLElement>('#grix-cloud-session-settings');
+    settings.hidden = !settings.hidden;
   });
 
   get<HTMLButtonElement>('#grix-cloud-screenshot').addEventListener('click', () => {
