@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { getWorkerConfig, parseResolution, parseSystemImagePackage, validateAction } from './cloud-worker.mjs';
+import os from 'node:os';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { getWorkerConfig, parseResolution, parseSystemImagePackage, resolveAvdManagerPath, validateAction } from './cloud-worker.mjs';
 
 test('normalizes tap coordinates without accepting values outside the screen', () => {
   assert.deepEqual(validateAction({ type: 'tap', x: 0.5, y: 0.25 }), { type: 'tap', x: 0.5, y: 0.25 });
@@ -57,6 +59,43 @@ test('worker config clamps capacity and keeps its API loopback-only by default',
   assert.equal(config.dataRoot, path.resolve('/var/lib/grixdroid'));
   assert.match(config.adb, /platform-tools/);
   assert.equal(config.systemImage, 'system-images;android-35;google_apis_playstore;x86_64');
+});
+
+test('finds avdmanager in versioned Android SDK command-line tools directories', () => {
+  const sdkRoot = mkdtempSync(path.join(os.tmpdir(), 'grixdroid-sdk-tools-'));
+  try {
+    const older = path.join(sdkRoot, 'cmdline-tools', '12.0', 'bin', 'avdmanager');
+    const newer = path.join(sdkRoot, 'cmdline-tools', '19.0', 'bin', 'avdmanager');
+    mkdirSync(path.dirname(older), { recursive: true });
+    mkdirSync(path.dirname(newer), { recursive: true });
+    writeFileSync(older, '');
+    writeFileSync(newer, '');
+
+    assert.equal(resolveAvdManagerPath(sdkRoot), newer);
+    assert.equal(
+      getWorkerConfig({ ANDROID_SDK_ROOT: sdkRoot }).avdManager,
+      newer,
+    );
+  } finally {
+    rmSync(sdkRoot, { recursive: true, force: true });
+  }
+});
+
+test('prefers the SDK latest alias and honors an explicit avdmanager override', () => {
+  const sdkRoot = mkdtempSync(path.join(os.tmpdir(), 'grixdroid-sdk-latest-'));
+  try {
+    const latest = path.join(sdkRoot, 'cmdline-tools', 'latest', 'bin', 'avdmanager');
+    const versioned = path.join(sdkRoot, 'cmdline-tools', '19.0', 'bin', 'avdmanager');
+    mkdirSync(path.dirname(latest), { recursive: true });
+    mkdirSync(path.dirname(versioned), { recursive: true });
+    writeFileSync(latest, '');
+    writeFileSync(versioned, '');
+
+    assert.equal(resolveAvdManagerPath(sdkRoot), latest);
+    assert.equal(resolveAvdManagerPath(sdkRoot, '/custom/sdk-tools/avdmanager'), '/custom/sdk-tools/avdmanager');
+  } finally {
+    rmSync(sdkRoot, { recursive: true, force: true });
+  }
 });
 
 test('worker config keeps the modern Supabase API key separate from its service-role JWT', () => {
