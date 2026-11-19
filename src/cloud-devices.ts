@@ -50,7 +50,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   root.innerHTML = [
     '<div class="grix-cloud-heading">',
     '  <div><div class="grix-cloud-eyebrow">GRIXDROID CLOUD</div><h2>My Android devices</h2>',
-    '  <p>Private device records, persistent storage and cross-device access.</p></div>',
+    '  <p>Private device records, persistent-storage metadata and cross-device access.</p></div>',
     '  <span class="grix-cloud-status" id="grix-cloud-status">NOT CONFIGURED</span>',
     '</div>',
     '<div class="grix-cloud-notice" id="grix-cloud-notice" role="status"></div>',
