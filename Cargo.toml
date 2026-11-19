@@ -1,0 +1,17 @@
+[package]
+name = "grixdroid"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/pilgrix-ux/Grixdriod"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+thiserror = "2"
+
+[profile.release]
+lto = true

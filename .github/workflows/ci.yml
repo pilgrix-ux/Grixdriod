@@ -1,0 +1,45 @@
+name: GRIXDroid CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-and-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CARGO_BUILD_JOBS: 2
+      CARGO_TERM_COLOR: always
+      npm_config_audit: false
+      npm_config_fund: false
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install Rust and WebAssembly target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Install wasm-pack
+        run: curl --proto '=https' --tlsv1.2 -sSf https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install frontend dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run Rust tests
+        run: cargo test --locked --lib
+      - name: Build WebAssembly and browser app
+        run: npm run build
+      - name: Upload browser build
+        uses: actions/upload-artifact@v4
+        with:
+          name: grixdroid-dist
+          path: dist/
+          if-no-files-found: error

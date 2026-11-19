@@ -1,0 +1,19 @@
+{
+  "name": "grixdroid",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build:wasm": "wasm-pack build --target web",
+    "build": "npm run build:wasm && tsc && vite build",
+    "preview": "vite preview",
+    "test": "cargo test --lib"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0"
+  }
+}
