@@ -34,7 +34,7 @@ The Cloud Devices workspace and self-hosted Android worker agent now provide the
 
 The worker code and optional WHIP/WHEP streaming integration are now in the repository, but no worker host, MediaMTX gateway or dedicated GRIXDroid database has been configured. Until an operator installs the Android SDK and streaming tools, applies all three migrations, and starts the worker on a durable host, provisioning requests remain queued. This is not yet a managed public cloud phone service. See [Cloud device architecture](docs/CLOUD_DEVICE_ARCHITECTURE.md) before configuring a backend.
 
-To configure the workspace, copy `.env.example` to `.env.local`, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, and apply all three migrations in `supabase/migrations/` to a dedicated GRIXDroid Supabase project. Never expose a Supabase service-role key to the browser. Supabase projects may require enabling the `public` schema in Data API settings before the website can query these tables.
+To configure the workspace, copy `.env.example` to `.env.local`, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, and apply all three migrations in `supabase/migrations/` to a dedicated GRIXDroid Supabase project. Never expose a Supabase secret API key or service-role JWT to the browser. The worker sends the `sb_secret_...` key in the `apikey` header and the legacy `service_role` JWT separately in the `Authorization` header. Supabase projects may require enabling the `public` schema in Data API settings before the website can query these tables.
 
 ## Self-hosted Android worker
 
@@ -42,8 +42,9 @@ The cloud worker boots a genuine Android Emulator system image—not the browser
 
 ```bash
 cp .env.worker.example .env.worker
-# Edit .env.worker with a dedicated GRIXDroid Supabase URL, server-only service_role key,
-# stable worker UUID, Android SDK path and persistent data directory.
+# Edit .env.worker with the dedicated GRIXDroid Supabase URL, a server-only sb_secret API key,
+# a legacy service_role JWT for the worker role claim, stable worker UUID, Android SDK path
+# and persistent data directory.
 npm ci
 npm run device-worker
 ```
