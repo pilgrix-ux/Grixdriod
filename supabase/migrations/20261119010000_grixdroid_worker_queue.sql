@@ -151,7 +151,7 @@ returns timestamptz
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   v_role text := coalesce(auth.jwt() ->> 'role', '');
   v_expiry timestamptz := now() + interval '10 minutes';
@@ -176,7 +176,7 @@ begin
 
   return v_expiry;
 end;
-$;
+$$;
 
 create or replace function public.grixdroid_complete_device_request(
   p_request_id uuid,
