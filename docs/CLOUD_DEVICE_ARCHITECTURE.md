@@ -118,7 +118,7 @@ Then configure the private worker:
 cp .env.worker.example .env.worker
 ```
 
-Set `SUPABASE_URL`, the server-only legacy `SUPABASE_SERVICE_ROLE_KEY`, `GRIXDROID_WORKER_ID` (a stable UUID), `ANDROID_SDK_ROOT`, and `GRIXDROID_DATA_ROOT`. Keep `.env.worker` out of Git and never copy the service-role key into a `VITE_` variable.
+Set `SUPABASE_URL`, a server-only `SUPABASE_API_KEY` (`sb_secret_...`) and `SUPABASE_SERVICE_ROLE_JWT` (the legacy service_role JWT used for the worker RPC role claim), `GRIXDROID_WORKER_ID` (a stable UUID), `ANDROID_SDK_ROOT`, and `GRIXDROID_DATA_ROOT`. The worker sends the secret API key only through `apikey` and the JWT only through `Authorization: Bearer`. Keep `.env.worker` out of Git and never copy either value into a `VITE_` variable. A legacy-only `SUPABASE_SERVICE_ROLE_KEY` variable remains available as a temporary fallback.
 
 Start it from the repository root:
 
