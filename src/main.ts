@@ -1,4 +1,5 @@
 import './style.css';
+import { mountAndroidDevicePanel } from './device-console';
 import init, {
   VirtualCPU,
   init_emulator,
@@ -50,7 +51,7 @@ app.innerHTML = `
     <header class="header">
       <div class="logo-glow"></div>
       <h1>GRIXDroid</h1>
-      <p class="subtitle">Wasm ARM emulator + constrained APK/DEX HLE</p>
+      <p class="subtitle">Real Android through ADB · Experimental ARM Lab</p>
     </header>
 
     <div class="status-panel">
@@ -184,6 +185,8 @@ app.innerHTML = `
     </footer>
   </div>
 `;
+
+mountAndroidDevicePanel(app);
 
 // ── Move the canvas into our wrapper ───────────────────────────────────
 const canvas = document.getElementById('screen') as HTMLCanvasElement;
