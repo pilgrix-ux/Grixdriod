@@ -60,7 +60,7 @@ async function main() {
   const adb = process.env.ADB_PATH || path.join(sdkRoot, 'platform-tools', 'adb');
   const emulator = process.env.EMULATOR_PATH || path.join(sdkRoot, 'emulator', 'emulator');
   const devices = await run(adb, ['devices']);
-  const serialMatch = String(devices.stdout).match(/^(emulator-(\\d+))\\s+device$/m);
+  const serialMatch = String(devices.stdout).match(/^(emulator-(\d+))\s+device$/m);
   if (!serialMatch) throw new Error('No booted Android Emulator is available for the worker integration test.');
   const serial = serialMatch[1];
   const port = Number(serialMatch[2]);
@@ -197,7 +197,7 @@ async function main() {
     await writeFile(path.join(runnerTemp, 'grixdroid-android-activities.txt'), activities.stdout);
     await writeFile(path.join(runnerTemp, 'grixdroid-android-smoke.txt'),
       'Passed: real Android API ' + after.androidSdk + ', Android ' + after.androidRelease +
-      ', Play Store + Google Play services verified, and Android Settings data survived GRIXDroid worker stop/start.\\n');
+      ', Play Store + Google Play services verified, and Android Settings data survived GRIXDroid worker stop/start.\n');
 
     console.log('[smoke] PASS: GRIXDroid worker stopped and restarted real Android ' + after.androidRelease +
       ' with Play Store; Android Settings data was retained.');
