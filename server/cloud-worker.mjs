@@ -93,7 +93,8 @@ export function getWorkerConfig(env = process.env) {
     workerLabel: env.GRIXDROID_WORKER_LABEL || os.hostname(),
     apiToken: env.GRIXDROID_WORKER_API_TOKEN || '',
     controlUrl: (env.SUPABASE_URL || '').replace(/\/+$/, ''),
-    serviceKey: env.SUPABASE_SERVICE_ROLE_KEY || '',
+    apiKey: env.SUPABASE_API_KEY || env.SUPABASE_SERVICE_ROLE_KEY || '',
+    serviceRoleJwt: env.SUPABASE_SERVICE_ROLE_JWT || env.SUPABASE_SERVICE_ROLE_KEY || '',
     corsOrigins: new Set((env.GRIXDROID_WORKER_CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map((v) => v.trim()).filter(Boolean)),
     allowRemote: env.GRIXDROID_WORKER_ALLOW_REMOTE === '1',
     enableSoftwareEmulation: env.GRIXDROID_ENABLE_SOFTWARE_EMULATION === '1',
@@ -170,12 +171,12 @@ async function run(file, args, options = {}) {
 }
 
 async function callRpc(config, name, args) {
-  if (!config.controlUrl || !config.serviceKey) throw new Error('Worker control plane is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on the worker only.');
+  if (!config.controlUrl || !config.apiKey || !config.serviceRoleJwt) throw new Error('Worker control plane is not configured. Set SUPABASE_URL, SUPABASE_API_KEY and SUPABASE_SERVICE_ROLE_JWT on the worker only.');
   const response = await fetch(config.controlUrl + '/rest/v1/rpc/' + name, {
     method: 'POST',
     headers: {
-      apikey: config.serviceKey,
-      Authorization: 'Bearer ' + config.serviceKey,
+      apikey: config.apiKey,
+      Authorization: 'Bearer ' + config.serviceRoleJwt,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(args),
@@ -783,7 +784,7 @@ async function handleRequest(req, res, config, token, instances) {
 export async function startCloudWorker(config = getWorkerConfig()) {
   if (!UUID_RE.test(config.workerId)) throw new Error('Set GRIXDROID_WORKER_ID to a UUID registered in grixdroid_private.workers.');
   if (!config.sdkRoot) throw new Error('Set ANDROID_SDK_ROOT to the Android SDK installation directory.');
-  if (!config.controlUrl || !config.serviceKey) throw new Error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on the worker host. Do not expose the service key to the browser.');
+  if (!config.controlUrl || !config.apiKey || !config.serviceRoleJwt) throw new Error('Set SUPABASE_URL, SUPABASE_API_KEY and SUPABASE_SERVICE_ROLE_JWT on the worker host. Keep both keys private and never expose them to the browser.');
   const remote = !['127.0.0.1', 'localhost', '::1'].includes(config.host);
   if (remote && (!config.allowRemote || config.apiToken.length < 32)) {
     throw new Error('Remote worker API binding requires GRIXDROID_WORKER_ALLOW_REMOTE=1 and a 32+ character GRIXDROID_WORKER_API_TOKEN behind HTTPS and a private network.');
