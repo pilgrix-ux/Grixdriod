@@ -2,10 +2,11 @@
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
 const execFileAsync = promisify(execFile);
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -91,14 +92,7 @@ function sendJson(res, status, data) {
 function secureEqual(a, b) {
   const left = Buffer.from(String(a));
   const right = Buffer.from(String(b));
-  return left.length === right.length && left.length > 0 && requireTimingSafeEqual(left, right);
-}
-
-function requireTimingSafeEqual(a, b) {
-  // Avoid a dependency on shell tools and compare bearer tokens without early exit.
-  let mismatch = 0;
-  for (let i = 0; i < a.length; i += 1) mismatch |= a[i] ^ b[i];
-  return mismatch === 0;
+  return left.length === right.length && left.length > 0 && timingSafeEqual(left, right);
 }
 
 function cors(req, res, config) {
@@ -524,7 +518,7 @@ async function heartbeatAndClaim(config, instances) {
       api: 1,
     },
   });
-  if (instances.size >= config.capacity) return null;
+  if ([...instances.values()].filter((item) => item.state === 'running' || item.state === 'starting').length >= config.capacity) return null;
   const result = await callRpc(config, 'grixdroid_claim_device_request', { p_worker_id: config.workerId });
   return Array.isArray(result) ? (result[0] || null) : result;
 }
@@ -657,7 +651,7 @@ export async function startCloudWorker(config = getWorkerConfig()) {
 }
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
-if (invokedPath && invokedPath === path.resolve(new URL(import.meta.url).pathname)) {
+if (invokedPath && invokedPath === fileURLToPath(import.meta.url)) {
   startCloudWorker().catch((error) => {
     process.stderr.write('[worker] Startup failed: ' + (error instanceof Error ? error.message : String(error)) + '\n');
     process.exitCode = 1;
