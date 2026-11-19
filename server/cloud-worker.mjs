@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import http from 'node:http';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
@@ -62,6 +63,11 @@ export function getWorkerConfig(env = process.env) {
     emulator: env.EMULATOR_PATH || (sdkRoot ? path.join(sdkRoot, 'emulator', process.platform === 'win32' ? 'emulator.exe' : 'emulator') : 'emulator'),
     avdManager: env.AVDMANAGER_PATH || (sdkRoot ? path.join(sdkRoot, 'cmdline-tools', 'latest', 'bin', process.platform === 'win32' ? 'avdmanager.bat' : 'avdmanager') : 'avdmanager'),
     systemImage,
+    scrcpyServerPath: env.SCRCPY_SERVER_PATH || '',
+    scrcpyVersion: env.SCRCPY_VERSION || '',
+    ffmpeg: env.FFMPEG_PATH || 'ffmpeg',
+    whipBaseUrl: (env.GRIXDROID_WHIP_BASE_URL || '').replace(/\\/+$/, ''),
+    streamPublishToken: env.GRIXDROID_STREAM_PUBLISH_TOKEN || '',
     accel,
     gpu: env.GRIXDROID_GPU_MODE || 'software',
     host,
@@ -268,6 +274,99 @@ async function ensureAvd(config, meta) {
   return outcome;
 }
 
+async function allocateTcpPort() {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', reject);
+    probe.listen(0, '127.0.0.1', () => {
+      const address = probe.address();
+      if (!address || typeof address === 'string') {
+        probe.close(() => reject(new Error('Could not allocate a local streaming port.')));
+        return;
+      }
+      const port = address.port;
+      probe.close((error) => error ? reject(error) : resolve(port));
+    });
+  });
+}
+
+async function setStreamState(config, meta, state, errorText = '') {
+  meta.streamState = state;
+  meta.streamError = errorText;
+  if (!meta.cloudDeviceId) return;
+  await callRpc(config, 'grixdroid_set_device_stream_state', {
+    p_device_id: meta.cloudDeviceId,
+    p_worker_id: config.workerId,
+    p_stream_state: state,
+    p_stream_error: errorText,
+  });
+}
+
+async function stopWebRTCStream(config, meta) {
+  for (const child of [meta.ffmpegProcess, meta.scrcpyProcess]) {
+    if (child && child.exitCode === null) child.kill('SIGTERM');
+  }
+  meta.ffmpegProcess = null;
+  meta.scrcpyProcess = null;
+  if (meta.streamPort) {
+    await run(config.adb, ['-s', meta.serial, 'forward', '--remove', 'tcp:' + meta.streamPort]).catch(() => {});
+  }
+  meta.streamPort = null;
+  if (meta.cloudDeviceId) await setStreamState(config, meta, 'disabled').catch(() => {});
+  else meta.streamState = 'disabled';
+}
+
+async function startWebRTCStream(config, meta) {
+  const enabled = Boolean(config.scrcpyServerPath && config.scrcpyVersion && config.whipBaseUrl && config.streamPublishToken);
+  if (!enabled) {
+    await setStreamState(config, meta, 'disabled').catch(() => {});
+    return;
+  }
+  let base;
+  try { base = new URL(config.whipBaseUrl); } catch { throw new Error('GRIXDROID_WHIP_BASE_URL must be a valid URL.'); }
+  if (base.protocol !== 'https:' && !(base.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(base.hostname))) {
+    throw new Error('GRIXDROID_WHIP_BASE_URL must use HTTPS (HTTP is allowed only for localhost).');
+  }
+
+  await setStreamState(config, meta, 'starting');
+  const streamPort = await allocateTcpPort();
+  const serverPath = '/data/local/tmp/grixdroid-scrcpy-server.jar';
+  await run(config.adb, ['-s', meta.serial, 'push', config.scrcpyServerPath, serverPath], { timeout: 60000 });
+  await run(config.adb, ['-s', meta.serial, 'forward', 'tcp:' + streamPort, 'localabstract:scrcpy']);
+  meta.streamPort = streamPort;
+
+  const serverArgs = [
+    '-s', meta.serial, 'shell',
+    'CLASSPATH=' + serverPath,
+    'app_process', '/', 'com.genymobile.scrcpy.Server', config.scrcpyVersion,
+    'tunnel_forward=true', 'audio=false', 'control=false', 'cleanup=false',
+    'raw_stream=true', 'max_size=1280',
+  ];
+  const scrcpy = spawn(config.adb, serverArgs, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
+  meta.scrcpyProcess = scrcpy;
+  scrcpy.stderr.on('data', (chunk) => { meta.streamError = String(chunk).slice(-500); });
+  await delay(800);
+  if (scrcpy.exitCode !== null) throw new Error('scrcpy-server exited before the H.264 stream opened.');
+
+  const whipUrl = config.whipBaseUrl.replace(/\\/+$/, '') + '/' + meta.cloudDeviceId + '/whip';
+  const input = 'tcp://127.0.0.1:' + streamPort + '?tcp_nodelay=1';
+  const ffmpegArgs = [
+    '-hide_banner', '-loglevel', 'warning',
+    '-fflags', 'nobuffer', '-flags', 'low_delay',
+    '-f', 'h264', '-i', input,
+    '-an', '-c:v', 'copy',
+    '-f', 'whip', '-authorization', config.streamPublishToken,
+    whipUrl,
+  ];
+  const ffmpeg = spawn(config.ffmpeg, ffmpegArgs, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
+  meta.ffmpegProcess = ffmpeg;
+  ffmpeg.stderr.on('data', (chunk) => { meta.streamError = String(chunk).slice(-700); });
+  ffmpeg.once('error', (error) => { meta.streamError = error.message; });
+  await delay(6000);
+  if (ffmpeg.exitCode !== null) throw new Error('FFmpeg WHIP publisher exited before the stream became ready. ' + (meta.streamError || ''));
+  await setStreamState(config, meta, 'ready');
+}
+
 async function pickPort(config) {
   const connected = await run(config.adb, ['devices'], { timeout: 10000 }).catch(() => ({ stdout: '' }));
   const used = new Set([...String(connected.stdout).matchAll(/emulator-(\d+)\s+device/g)].map((m) => Number(m[1])));
@@ -332,6 +431,7 @@ async function startExisting(config, meta) {
 
 async function stopDevice(config, meta) {
   if (meta.state === 'stopped') return;
+  await stopWebRTCStream(config, meta);
   meta.expectedStop = true;
   await adb(config, meta.serial, ['emu', 'kill'], { timeout: 10000 }).catch(() => {
     if (meta.process && meta.process.exitCode === null) meta.process.kill('SIGTERM');
@@ -394,6 +494,7 @@ function publicDevice(meta) {
     androidRelease: meta.androidRelease || null,
     resolution: meta.resolution || { width: 0, height: 0 },
     storage: 'persistent-volume',
+    streamState: meta.streamState || 'disabled',
   };
 }
 
@@ -495,6 +596,13 @@ async function bootClaim(config, claim, instances) {
     meta.state = 'running';
     await persistMeta(meta);
     instances.set(meta.cloudDeviceId, meta);
+    try {
+      await startWebRTCStream(config, meta);
+    } catch (streamError) {
+      await setStreamState(config, meta, 'error', streamError instanceof Error ? streamError.message : String(streamError)).catch(() => {});
+      process.stderr.write('[worker] WebRTC publisher failed for ' + meta.cloudDeviceId + ': ' + (streamError instanceof Error ? streamError.message : String(streamError)) + '\n');
+    }
+    await persistMeta(meta);
     process.stdout.write('[worker] Android device ready: ' + meta.name + ' (' + meta.cloudDeviceId + '), Android ' + (meta.androidRelease || 'unknown') + '\n');
   } catch (error) {
     if (meta?.process && meta.process.exitCode === null) {
@@ -604,6 +712,14 @@ export async function startCloudWorker(config = getWorkerConfig()) {
   }
   const token = config.apiToken || randomBytes(32).toString('hex');
   await mkdir(config.devicesRoot, { recursive: true });
+
+  if (config.scrcpyServerPath || config.whipBaseUrl || config.streamPublishToken) {
+    if (!config.scrcpyServerPath || !config.scrcpyVersion || !config.whipBaseUrl || config.streamPublishToken.length < 32) {
+      throw new Error('WebRTC requires SCRCPY_SERVER_PATH, SCRCPY_VERSION, GRIXDROID_WHIP_BASE_URL and a 32+ character GRIXDROID_STREAM_PUBLISH_TOKEN.');
+    }
+    const help = await run(config.ffmpeg, ['-hide_banner', '-h', 'muxer=whip']);
+    if (!String(help.stdout).toLowerCase().includes('authorization')) throw new Error('The installed FFmpeg build must include the WHIP muxer with its authorization option.');
+  }
 
   await run(config.emulator, ['-version']);
   await run(config.avdManager, ['--version']).catch(() => {
