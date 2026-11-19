@@ -10,6 +10,7 @@ This milestone introduces the first account-scoped control-plane layer:
 - Device lifecycle writes are reserved for trusted server-side services.
 - Worker records, runtime handles and persistent-volume references live in a private database schema.
 - The website has a Cloud Devices workspace for sign-in, device inventory and provisioning requests.
+- The Android viewer sends taps, swipes, Back/Home/Recent and text input through a user-owned command queue; service-role-only RPCs keep worker credentials out of the browser.
 
 A queued request is only a durable request record. It is **not** an Android device and does not mean an emulator has booted.
 
@@ -17,7 +18,7 @@ A queued request is only a durable request record. It is **not** an Android devi
 
 The intended system has four separate parts:
 
-1. **Web client** — account sign-in, device list, lifecycle controls and a WebRTC viewer.
+1. **Web client** — account sign-in, device inventory, provisioning requests and an interactive WebRTC viewer.
 2. **Control plane** — authenticates users, validates quotas, claims provisioning requests, schedules workers and issues short-lived sessions.
 3. **Android worker** — runs one or more isolated Android Emulator/Cuttlefish instances and reports health to the control plane.
 4. **Persistent volume** — one private writable data volume per device, mounted back to the same device after stop/start or worker recovery.
@@ -40,6 +41,7 @@ The migration uses auth.uid() ownership policies:
 - A user can cancel only their own queued requests.
 - A user can read only devices and session metadata tied to their own account.
 - Browser users cannot change device state, assign workers or alter runtime references.
+- Users can enqueue only allowlisted input for their own running device with a ready stream; worker claim/finish RPCs are executable only by `service_role`.
 - Service-role credentials must stay in trusted server-side services and must never be included in Vite variables or browser bundles.
 
 The UI keeps access tokens in page memory and refreshes them through Supabase Auth. The website uses only a Supabase publishable key, which is designed for public clients; database RLS is the authorization boundary.
@@ -87,19 +89,20 @@ The worker:
 - Leaves the AVD data directory in place when stopped and can start the same AVD again.
 - Exposes a loopback-only development API for health, device inventory, screenshots, tap/swipe, navigation keys, text entry, start and stop.
 
-The worker API is not the public customer session gateway. Keep it on loopback or a private network. Public users must not receive the service-role key, worker API token, worker IP address, AVD paths or direct ADB access.
+The worker API is not the public customer session gateway. Keep it on loopback or a private network. Public users must not receive the service-role key, worker API token, worker IP address, AVD paths or direct ADB access. Browser screen controls use the owner-scoped `cloud_device_actions` table; the worker polls its private command queue through service-role RPCs, and recovers commands left processing after a worker crash.
 
 ### Database setup
 
-Apply both migrations, in this order, to a **dedicated GRIXDroid Supabase project**:
+The dedicated Supabase project is **Grix emulator**. It is active, and all four migrations below are recorded in its migration history. Keep these files in sync with the database history; do not reapply them under different versions:
 
-1. `supabase/migrations/20261119000000_grixdroid_cloud_devices.sql`
-2. `supabase/migrations/20261119010000_grixdroid_worker_queue.sql`
-3. `supabase/migrations/20261119020000_grixdroid_webrtc_streams.sql`
+1. `supabase/migrations/20261119175734_grixdroid_cloud_devices.sql`
+2. `supabase/migrations/20261119175837_grixdroid_worker_queue.sql`
+3. `supabase/migrations/20261119175841_grixdroid_webrtc_streams.sql`
+4. `supabase/migrations/20261119192634_grixdroid_device_controls.sql`
 
-The second migration adds service-role-only RPCs for worker heartbeat, atomic queue claiming, lease renewal, request completion/failure and device-state changes. The functions check the service-role JWT and have execute permission revoked from `public`, `anon` and `authenticated`.
+The worker-queue migration adds service-role-only RPCs for heartbeat, atomic provisioning claims, lease renewal, completion/failure and device-state changes. The device-controls migration adds an owner-scoped input queue and service-role-only claim/finish RPCs. Both migrations check the role claim and revoke execute permission from `public`, `anon` and `authenticated`.
 
-Do not apply these migrations to the unrelated Pilgrix Android or GRIX CODE projects. A dedicated GRIXDroid database has not yet been selected or configured.
+Do not apply these migrations to the unrelated Pilgrix Android or GRIX CODE projects. The dedicated GRIXDroid database is already configured; the remaining deployment requirement is a persistent Android worker and streaming host.
 
 ### Worker host setup
 
@@ -175,4 +178,4 @@ This is the control-plane/data-model foundation, not an Appetize.io replacement 
 - No public network egress/IP isolation is provisioned yet.
 - No Google Play packages are redistributed by GRIXDroid.
 
-The next engineering milestone is to provision a dedicated GRIXDroid database and durable Android worker host, apply the migrations, then verify a real Android boot, persistent stop/start and end-to-end WebRTC playback.
+The database and four migrations are already in place. The next deployment milestone is to enroll a persistent Android worker on a durable host, configure the MediaMTX gateway and Vercel frontend variables, then verify real Android boot, touch control, persistent stop/start and end-to-end WebRTC playback.
