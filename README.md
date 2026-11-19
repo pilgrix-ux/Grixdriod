@@ -23,17 +23,32 @@ The APK runner supports only a narrow subset of DEX instructions and framework c
 
 ## Cloud device manager foundation
 
-The Cloud Devices workspace now provides the first account-scoped control-plane UI:
+The Cloud Devices workspace and self-hosted Android worker agent now provide the first account-scoped control-plane and host-side runtime foundation:
 
 - Supabase Auth sign-up/sign-in for an individual account.
 - Per-account provisioning request history.
 - Owner-scoped cloud device and session inventory.
 - A database migration with Row Level Security and private worker/runtime metadata.
 - Persistent-volume metadata kept separate from browser-visible device records.
+- A worker agent that claims queued requests, boots individual Android Emulator AVDs, preserves their writable data directories, and exposes a loopback-only diagnostic API.
 
-This is the management/data foundation only. No Android worker is enrolled yet, so provisioning requests remain queued and no live cloud phone is created. See [Cloud device architecture](docs/CLOUD_DEVICE_ARCHITECTURE.md) before configuring a backend.
+The worker code is now in the repository, but no worker host or dedicated GRIXDroid database has been configured. Until an operator installs the Android SDK, applies both migrations, and starts the worker on a durable host, provisioning requests remain queued. This is not yet a public cloud phone service or a WebRTC streaming product. See [Cloud device architecture](docs/CLOUD_DEVICE_ARCHITECTURE.md) before configuring a backend.
 
 To configure the workspace, copy `.env.example` to `.env.local`, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, and apply the migration in `supabase/migrations/` to a dedicated GRIXDroid Supabase project. Never expose a Supabase service-role key to the browser. Supabase projects may require enabling the `public` schema in Data API settings before the website can query these tables.
+
+## Self-hosted Android worker
+
+The experimental cloud worker can boot a separate Android Emulator AVD for each queued device request. It needs a persistent host with Android SDK Command-line Tools, Emulator, Platform Tools, a downloaded system image and durable storage.
+
+```bash
+cp .env.worker.example .env.worker
+# Edit .env.worker with a dedicated GRIXDroid Supabase URL, server-only service_role key,
+# stable worker UUID, Android SDK path and persistent data directory.
+npm ci
+npm run device-worker
+```
+
+Apply both Supabase migrations in order before starting the worker. For a Linux host without KVM, software CPU emulation is an explicit development-only option and is very slow; see [the worker setup guide](docs/CLOUD_DEVICE_ARCHITECTURE.md). The worker API defaults to loopback and is not directly exposed to website visitors.
 
 ## Real Android web integration
 
@@ -92,6 +107,7 @@ The production build compiles the Rust crate to WebAssembly, then runs TypeScrip
 - src/android/: APK/AXML/DEX parsing and constrained Dalvik HLE runtime
 - src/lib.rs: WebAssembly exports
 - src/main.ts, src/style.css: browser UI and rendering
+- server/cloud-worker.mjs: persistent Android Emulator worker agent
 - docs/: implementation notes and current support boundaries
 
 ## Attribution
