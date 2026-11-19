@@ -76,9 +76,31 @@ begin
     raise exception 'service_role is required' using errcode = '42501';
   end if;
 
-  -- Expired claims become eligible for retry.
-  delete from grixdroid_private.request_leases l
-  where l.expires_at <= now();
+  -- Expired claims become eligible for retry and release their worker slots.
+  with expired as (
+    delete from grixdroid_private.request_leases l
+    where l.expires_at <= now()
+    returning l.request_id, l.worker_id
+  ), requeued as (
+    update public.cloud_device_requests r
+    set status = 'queued', updated_at = now(),
+        failure_reason = 'Previous worker lease expired; request returned to queue.'
+    from expired e
+    where r.id = e.request_id and r.status = 'claimed'
+    returning e.worker_id
+  ), released as (
+    select worker_id, count(*)::integer as slots
+    from requeued
+    group by worker_id
+  )
+  update grixdroid_private.workers w
+  set active_devices = greatest(0, w.active_devices - released.slots),
+      status = case
+        when greatest(0, w.active_devices - released.slots) >= w.capacity then 'busy'
+        else 'ready'
+      end
+  from released
+  where w.id = released.worker_id;
 
   update grixdroid_private.workers w
   set last_heartbeat_at = now()
@@ -119,6 +141,42 @@ begin
   select v_request.id, v_request.user_id, v_request.name, v_request.profile, v_token, v_expiry;
 end;
 $$;
+
+create or replace function public.grixdroid_renew_device_lease(
+  p_request_id uuid,
+  p_worker_id uuid,
+  p_lease_token uuid
+)
+returns timestamptz
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare
+  v_role text := coalesce(auth.jwt() ->> 'role', '');
+  v_expiry timestamptz := now() + interval '10 minutes';
+begin
+  if v_role <> 'service_role' then
+    raise exception 'service_role is required' using errcode = '42501';
+  end if;
+
+  update grixdroid_private.request_leases l
+  set expires_at = v_expiry
+  where l.request_id = p_request_id
+    and l.worker_id = p_worker_id
+    and l.lease_token = p_lease_token
+    and l.expires_at > now();
+  if not found then
+    raise exception 'request lease is missing or expired' using errcode = '42501';
+  end if;
+
+  update grixdroid_private.workers w
+  set last_heartbeat_at = now()
+  where w.id = p_worker_id;
+
+  return v_expiry;
+end;
+$;
 
 create or replace function public.grixdroid_complete_device_request(
   p_request_id uuid,
@@ -208,14 +266,14 @@ begin
     raise exception 'service_role is required' using errcode = '42501';
   end if;
 
-  if not exists (
-    select 1 from grixdroid_private.request_leases l
-    where l.request_id = p_request_id
-      and l.worker_id = p_worker_id
-      and l.lease_token = p_lease_token
-      and l.expires_at > now()
-    for update
-  ) then
+  perform 1
+  from grixdroid_private.request_leases l
+  where l.request_id = p_request_id
+    and l.worker_id = p_worker_id
+    and l.lease_token = p_lease_token
+    and l.expires_at > now()
+  for update;
+  if not found then
     raise exception 'request lease is missing, expired or owned by another worker' using errcode = '42501';
   end if;
 
@@ -292,6 +350,9 @@ $$;
 
 revoke all on function public.grixdroid_worker_heartbeat(uuid, text, integer, jsonb) from public, anon, authenticated;
 revoke all on function public.grixdroid_claim_device_request(uuid) from public, anon, authenticated;
+revoke all on function public.grixdroid_renew_device_lease(uuid, uuid, uuid) from public, anon, authenticated;
+grant execute on function public.grixdroid_renew_device_lease(uuid, uuid, uuid) to service_role;
+
 revoke all on function public.grixdroid_complete_device_request(uuid, uuid, uuid, text, text, text, bigint) from public, anon, authenticated;
 revoke all on function public.grixdroid_fail_device_request(uuid, uuid, uuid, text) from public, anon, authenticated;
 revoke all on function public.grixdroid_set_device_state(uuid, uuid, text, text, bigint) from public, anon, authenticated;
