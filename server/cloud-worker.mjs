@@ -55,7 +55,7 @@ export function validateAction(body) {
         !/^[a-f0-9-]{36}\.apk$/i.test(parts[2]) || path.posix.normalize(objectPath) !== objectPath) {
       throw new Error('APK storage path is invalid.');
     }
-    if (!filename || filename.length > 120 || !/\.apk$/i.test(filename) || /[\\/\u0000-\u001f]/.test(filename)) {
+    if (!filename || filename.length > 120 || !/\.apk$/i.test(filename) || /[\\/\u0000-\u001f;<>:"|?*]/.test(filename)) {
       throw new Error('APK filename must be a valid .apk filename.');
     }
     return { type: 'install_apk', object_path: objectPath, filename };
