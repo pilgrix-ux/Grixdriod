@@ -21,6 +21,20 @@ GRIXDroid is **not a complete Android operating system** and is not a general-pu
 
 The APK runner supports only a narrow subset of DEX instructions and framework calls. Treat this as a systems research prototype, not a replacement for the Android Emulator or a real Android device.
 
+## Cloud device manager foundation
+
+The Cloud Devices workspace now provides the first account-scoped control-plane UI:
+
+- Supabase Auth sign-up/sign-in for an individual account.
+- Per-account provisioning request history.
+- Owner-scoped cloud device and session inventory.
+- A database migration with Row Level Security and private worker/runtime metadata.
+- Persistent-volume metadata kept separate from browser-visible device records.
+
+This is the management/data foundation only. No Android worker is enrolled yet, so provisioning requests remain queued and no live cloud phone is created. See [Cloud device architecture](docs/CLOUD_DEVICE_ARCHITECTURE.md) before configuring a backend.
+
+To configure the workspace, copy `.env.example` to `.env.local`, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, and apply the migration in `supabase/migrations/` to a dedicated GRIXDroid Supabase project. Never expose a Supabase service-role key to the browser. Supabase projects may require enabling the `public` schema in Data API settings before the website can query these tables.
+
 ## Real Android web integration
 
 The website now includes a **Real Android device** panel. It connects to an Android phone or an already-running Android Emulator through the private ADB bridge in `server/adb-bridge.mjs`.
