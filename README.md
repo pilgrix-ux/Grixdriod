@@ -32,9 +32,9 @@ The Cloud Devices workspace and self-hosted Android worker agent now provide the
 - Persistent-volume metadata kept separate from browser-visible device records.
 - A worker agent that claims queued requests, boots individual Android Emulator AVDs, preserves their writable data directories, and exposes a loopback-only diagnostic API.
 
-The worker code is now in the repository, but no worker host or dedicated GRIXDroid database has been configured. Until an operator installs the Android SDK, applies both migrations, and starts the worker on a durable host, provisioning requests remain queued. This is not yet a public cloud phone service or a WebRTC streaming product. See [Cloud device architecture](docs/CLOUD_DEVICE_ARCHITECTURE.md) before configuring a backend.
+The worker code and optional WHIP/WHEP streaming integration are now in the repository, but no worker host, MediaMTX gateway or dedicated GRIXDroid database has been configured. Until an operator installs the Android SDK and streaming tools, applies all three migrations, and starts the worker on a durable host, provisioning requests remain queued. This is not yet a managed public cloud phone service. See [Cloud device architecture](docs/CLOUD_DEVICE_ARCHITECTURE.md) before configuring a backend.
 
-To configure the workspace, copy `.env.example` to `.env.local`, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, and apply the migration in `supabase/migrations/` to a dedicated GRIXDroid Supabase project. Never expose a Supabase service-role key to the browser. Supabase projects may require enabling the `public` schema in Data API settings before the website can query these tables.
+To configure the workspace, copy `.env.example` to `.env.local`, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, and apply all three migrations in `supabase/migrations/` to a dedicated GRIXDroid Supabase project. Never expose a Supabase service-role key to the browser. Supabase projects may require enabling the `public` schema in Data API settings before the website can query these tables.
 
 ## Self-hosted Android worker
 
@@ -48,7 +48,7 @@ npm ci
 npm run device-worker
 ```
 
-Apply both Supabase migrations in order before starting the worker. For a Linux host without KVM, software CPU emulation is an explicit development-only option and is very slow; see [the worker setup guide](docs/CLOUD_DEVICE_ARCHITECTURE.md). The worker API defaults to loopback and is not directly exposed to website visitors.
+Apply all three Supabase migrations in order before starting the worker. For optional WebRTC, configure the matching scrcpy server JAR, an FFmpeg build with the WHIP muxer, the MediaMTX host and the signed-in viewer endpoint; see [WebRTC streaming setup](docs/WEBRTC_STREAMING.md). For a Linux host without KVM, software CPU emulation is an explicit development-only option and is very slow; see [the worker setup guide](docs/CLOUD_DEVICE_ARCHITECTURE.md). The worker API defaults to loopback and is not directly exposed to website visitors.
 
 ## Real Android web integration
 
