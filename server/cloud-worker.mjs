@@ -939,7 +939,9 @@ export async function startCloudWorker(config = getWorkerConfig()) {
   const image = await assertSystemImageInstalled(config);
   await run(config.emulator, ['-version']);
   try {
-    await run(config.avdManager, ['--version']);
+    // avdmanager has no top-level --version flag. Use its supported list
+    // subcommand as a non-destructive executable/SDK-tools health check.
+    await run(config.avdManager, ['list', 'avd']);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error('Could not execute Android SDK avdmanager (' + config.avdManager + '): ' + detail + '. Install Android SDK Command-line Tools and ensure avdmanager is on PATH.');
