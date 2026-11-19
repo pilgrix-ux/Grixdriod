@@ -34,11 +34,13 @@ type CloudDevice = {
   state: 'provisioning' | 'stopped' | 'starting' | 'running' | 'stopping' | 'error' | 'deleting';
   storage_state: 'pending' | 'attached' | 'snapshotting' | 'error';
   storage_bytes: number;
+  stream_state: 'disabled' | 'starting' | 'ready' | 'error';
   created_at: string;
 };
 
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+const WHEP_BASE_URL = (import.meta.env.VITE_GRIXDROID_WHEP_BASE_URL || '').replace(/\\/+$/, '');
 const configured = Boolean(SUPABASE_URL && SUPABASE_KEY);
 const authBase = SUPABASE_URL + '/auth/v1';
 const restBase = SUPABASE_URL + '/rest/v1';
@@ -75,8 +77,15 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '  </div>',
     '  <div class="grix-cloud-section-heading"><div><h3>Provisioning requests</h3><p>Requests stay attached to your account.</p></div></div>',
     '  <div class="grix-cloud-request-list" id="grix-cloud-request-list"><div class="grix-cloud-empty">No requests yet.</div></div>',
+    '  <div class="grix-cloud-viewer" id="grix-cloud-viewer" hidden>',
+    '    <div class="grix-cloud-viewer-shell">',
+    '      <div class="grix-cloud-viewer-toolbar"><strong id="grix-cloud-viewer-title">Android device</strong><button class="grix-cloud-secondary" id="grix-cloud-viewer-close" type="button">Close</button></div>',
+    '      <video id="grix-cloud-viewer-video" autoplay playsinline muted></video>',
+    '      <p id="grix-cloud-viewer-status" role="status">Connecting to the Android stream…</p>',
+    '    </div>',
+    '  </div>',
     '</div>',
-    '<div class="grix-cloud-footnote">Cloud device provisioning is being connected to its Android worker service. A queued request is not a live Android device. Google Play availability depends on a properly authorized Android image; GRIXDroid does not bundle Google proprietary apps.</div>',
+    '<div class="grix-cloud-footnote">Device requests are handled by a separately installed Android worker. A queued request is not a live Android device. Google Play availability depends on a properly authorized Android image; GRIXDroid does not bundle Google proprietary apps.</div>',
   ].join('');
 
   const header = app.querySelector('.header');
@@ -101,7 +110,14 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   const deviceList = get<HTMLElement>('#grix-cloud-device-list');
   const requestList = get<HTMLElement>('#grix-cloud-request-list');
   const accountLabel = get<HTMLElement>('#grix-cloud-account');
+  const viewer = get<HTMLElement>('#grix-cloud-viewer');
+  const viewerTitle = get<HTMLElement>('#grix-cloud-viewer-title');
+  const viewerStatus = get<HTMLElement>('#grix-cloud-viewer-status');
+  const viewerVideo = get<HTMLVideoElement>('#grix-cloud-viewer-video');
 
+  let viewerPeer: RTCPeerConnection | null = null;
+  let viewerResource: string | null = null;
+  let viewerToken: string | null = null;
   let authMode: 'signin' | 'signup' = 'signin';
   let authSession: AuthSession | null = null;
   let busy = false;
@@ -118,6 +134,93 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     status.textContent = authSession ? 'ACCOUNT CONNECTED' : configured ? 'SIGN IN REQUIRED' : 'NOT CONFIGURED';
     status.classList.toggle('connected', Boolean(authSession));
     accountLabel.textContent = email ? 'Signed in as ' + email : 'Signed in';
+  }
+
+  async function waitForIceGathering(peer: RTCPeerConnection): Promise<void> {
+    if (peer.iceGatheringState === 'complete') return;
+    await new Promise<void>((resolve) => {
+      const timeout = window.setTimeout(finish, 7000);
+      function finish(): void {
+        window.clearTimeout(timeout);
+        peer.removeEventListener('icegatheringstatechange', onChange);
+        resolve();
+      }
+      function onChange(): void {
+        if (peer.iceGatheringState === 'complete') finish();
+      }
+      peer.addEventListener('icegatheringstatechange', onChange);
+      onChange();
+    });
+  }
+
+  async function closeViewer(): Promise<void> {
+    const resource = viewerResource;
+    const token = viewerToken;
+    viewerResource = null;
+    viewerToken = null;
+    if (viewerPeer) viewerPeer.close();
+    viewerPeer = null;
+    viewerVideo.srcObject = null;
+    viewer.hidden = true;
+    if (resource && token) {
+      await fetch(resource, {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + token },
+        cache: 'no-store',
+      }).catch(() => undefined);
+    }
+  }
+
+  async function openViewer(device: CloudDevice): Promise<void> {
+    if (!WHEP_BASE_URL) throw new Error('Set VITE_GRIXDROID_WHEP_BASE_URL to the HTTPS MediaMTX address to enable browser streaming.');
+    if (!authSession) throw new Error('Sign in before opening a device stream.');
+    if (device.state !== 'running' || device.stream_state !== 'ready') throw new Error('This Android device does not currently have a ready WebRTC stream.');
+
+    await closeViewer();
+    viewer.hidden = false;
+    viewerTitle.textContent = device.name;
+    viewerStatus.textContent = 'Negotiating a secure WebRTC connection…';
+    const token = await accessToken();
+    const peer = new RTCPeerConnection();
+    viewerPeer = peer;
+    peer.addTransceiver('video', { direction: 'recvonly' });
+    peer.ontrack = (event) => {
+      viewerVideo.srcObject = event.streams[0] || new MediaStream([event.track]);
+      viewerStatus.textContent = 'Connected · live Android screen';
+      void viewerVideo.play().catch(() => undefined);
+    };
+    peer.onconnectionstatechange = () => {
+      if (peer.connectionState === 'failed' || peer.connectionState === 'disconnected') {
+        viewerStatus.textContent = 'Connection lost. Close this viewer and try again.';
+      }
+    };
+
+    try {
+      await peer.setLocalDescription(await peer.createOffer());
+      await waitForIceGathering(peer);
+      const endpoint = WHEP_BASE_URL + '/' + encodeURIComponent(device.id) + '/whep';
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/sdp',
+          Authorization: 'Bearer ' + token,
+        },
+        body: peer.localDescription?.sdp || '',
+        cache: 'no-store',
+      });
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || 'WebRTC playback request failed (' + response.status + ').');
+      }
+      const answer = await response.text();
+      const location = response.headers.get('Location');
+      if (location) viewerResource = new URL(location, endpoint).toString();
+      viewerToken = token;
+      await peer.setRemoteDescription({ type: 'answer', sdp: answer });
+    } catch (error) {
+      await closeViewer();
+      throw error;
+    }
   }
 
   function responseMessage(payload: unknown): string {
@@ -223,7 +326,26 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       const storage = document.createElement('p');
       const bytes = Number(device.storage_bytes) || 0;
       storage.textContent = 'Persistent data volume · ' + (device.storage_state || 'pending') + ' · ' + (bytes > 0 ? (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB reported' : 'size not reported');
-      card.append(top, meta, storage);
+      const stream = document.createElement('p');
+      stream.textContent = 'WebRTC stream · ' + (device.stream_state || 'disabled');
+      card.append(top, meta, storage, stream);
+      if (WHEP_BASE_URL && device.state === 'running' && device.stream_state === 'ready') {
+        const watch = document.createElement('button');
+        watch.className = 'grix-cloud-secondary';
+        watch.type = 'button';
+        watch.textContent = 'Open Android screen';
+        watch.addEventListener('click', async () => {
+          watch.disabled = true;
+          try {
+            await openViewer(device);
+          } catch (error) {
+            setNotice(error instanceof Error ? error.message : 'Unable to open the Android stream.', 'error');
+          } finally {
+            watch.disabled = false;
+          }
+        });
+        card.append(watch);
+      }
       fragment.append(card);
     }
     deviceList.replaceChildren(fragment);
@@ -275,7 +397,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   async function reload(): Promise<void> {
     if (!authSession) return;
     const [devices, requests] = await Promise.all([
-      restRequest<CloudDevice[]>('/cloud_devices?select=id,name,profile,android_release,state,storage_state,storage_bytes,created_at&order=created_at.desc'),
+      restRequest<CloudDevice[]>('/cloud_devices?select=id,name,profile,android_release,state,storage_state,storage_bytes,stream_state,created_at&order=created_at.desc'),
       restRequest<DeviceRequest[]>('/cloud_device_requests?select=id,name,profile,status,created_at,failure_reason&order=created_at.desc'),
     ]);
     renderDevices(devices);
@@ -370,7 +492,10 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     }
   });
 
+  get<HTMLButtonElement>('#grix-cloud-viewer-close').addEventListener('click', () => { void closeViewer(); });
+
   get<HTMLButtonElement>('#grix-cloud-signout').addEventListener('click', async () => {
+    await closeViewer();
     const current = authSession;
     authSession = null;
     setSignedIn(undefined);
