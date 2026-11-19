@@ -41,6 +41,7 @@ jobs:
           target: google_apis_playstore
           arch: x86_64
           profile: pixel_7
+          avd-name: grixdroid-real-android
           cores: 2
           ram-size: 2048M
           emulator-boot-timeout: 900
@@ -76,7 +77,7 @@ jobs:
             PORT="${SERIAL#emulator-}"
             adb -s "$SERIAL" emu kill
             adb -s "$SERIAL" wait-for-disconnect || true
-            nohup emulator -avd "$AVD_NAME" -port "$PORT" -no-window -no-audio -no-boot-anim -gpu software > "$RUNNER_TEMP/grixdroid-emulator-restart.log" 2>&1 &
+            nohup emulator -avd "$AVD_NAME" -port "$PORT" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > "$RUNNER_TEMP/grixdroid-emulator-restart.log" 2>&1 &
             adb -s "$SERIAL" wait-for-device
             for attempt in $(seq 1 180); do
               BOOTED="$(adb -s "$SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
