@@ -3,9 +3,18 @@ name: Android Emulator Smoke (Free macOS)
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: ["**"]
     paths:
       - ".github/workflows/android-emulator-smoke.yml"
+      - "server/cloud-worker.mjs"
+      - "server/cloud-worker.test.mjs"
+      - ".env.worker.example"
+  pull_request:
+    paths:
+      - ".github/workflows/android-emulator-smoke.yml"
+      - "server/cloud-worker.mjs"
+      - "server/cloud-worker.test.mjs"
+      - ".env.worker.example"
 
 permissions:
   contents: read
@@ -57,11 +66,40 @@ jobs:
             adb shell monkey -p com.android.vending 1
             sleep 5
 
-            echo "Capturing Play Store and Android evidence:"
-            adb exec-out screencap -p > "$RUNNER_TEMP/grixdroid-playstore.png"
-            adb shell dumpsys activity activities > "$RUNNER_TEMP/grixdroid-android-activities.txt"
+            echo "Launching the Play Store app (no Google account is added in CI):"
+            adb shell monkey -p com.android.vending 1
+            sleep 5
 
-            echo "Android + Google Play Store package smoke test passed." | tee "$RUNNER_TEMP/grixdroid-android-smoke.txt"
+            echo "Proving Android /data survives a full emulator stop and restart:"
+            adb shell settings put global grixdroid_persistence_probe survives_restart
+            adb shell sync
+            AVD_NAME="$(emulator -list-avds | head -n 1)"
+            SERIAL="$(adb devices | awk '/^emulator-[0-9]+[[:space:]]+device$/ { print $1; exit }')"
+            test -n "$AVD_NAME"
+            test -n "$SERIAL"
+            PORT="${SERIAL#emulator-}"
+            adb -s "$SERIAL" emu kill
+            adb -s "$SERIAL" wait-for-disconnect || true
+            nohup emulator -avd "$AVD_NAME" -port "$PORT" -no-window -no-audio -no-boot-anim -gpu software > "$RUNNER_TEMP/grixdroid-emulator-restart.log" 2>&1 &
+            adb -s "$SERIAL" wait-for-device
+            for attempt in $(seq 1 180); do
+              BOOTED="$(adb -s "$SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
+              if [ "$BOOTED" = "1" ]; then break; fi
+              sleep 3
+            done
+            test "$(adb -s "$SERIAL" shell getprop sys.boot_completed | tr -d '\\r')" = "1"
+            test "$(adb -s "$SERIAL" shell settings get global grixdroid_persistence_probe | tr -d '\\r')" = "survives_restart"
+            test -n "$(adb -s "$SERIAL" shell pm path com.android.vending)"
+            test -n "$(adb -s "$SERIAL" shell pm path com.google.android.gms)"
+
+            echo "Capturing restarted Android and Play Store evidence:"
+            adb -s "$SERIAL" shell monkey -p com.android.vending 1
+            sleep 5
+            adb -s "$SERIAL" exec-out screencap -p > "$RUNNER_TEMP/grixdroid-playstore.png"
+            adb -s "$SERIAL" shell dumpsys activity activities > "$RUNNER_TEMP/grixdroid-android-activities.txt"
+            adb -s "$SERIAL" shell getprop ro.build.fingerprint > "$RUNNER_TEMP/grixdroid-android-fingerprint.txt"
+
+            echo "Real Android + Play Store + retained /data stop/start smoke test passed." | tee "$RUNNER_TEMP/grixdroid-android-smoke.txt"
 
       - name: Save Android boot evidence
         if: always()
@@ -72,5 +110,7 @@ jobs:
             ${{ runner.temp }}/grixdroid-playstore.png
             ${{ runner.temp }}/grixdroid-android-activities.txt
             ${{ runner.temp }}/grixdroid-android-smoke.txt
+            ${{ runner.temp }}/grixdroid-android-fingerprint.txt
+            ${{ runner.temp }}/grixdroid-emulator-restart.log
           if-no-files-found: warn
           retention-days: 3
