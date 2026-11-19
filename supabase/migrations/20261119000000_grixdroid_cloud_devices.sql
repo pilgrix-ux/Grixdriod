@@ -32,7 +32,7 @@ create table if not exists public.cloud_device_requests (
   updated_at timestamptz not null default now(),
   constraint cloud_device_requests_fulfilled_device_fk
     foreign key (fulfilled_device_id, user_id)
-    references public.cloud_devices (id, user_id) on delete set null
+    references public.cloud_devices (id, user_id) on delete set null (fulfilled_device_id)
 );
 
 create table if not exists public.cloud_device_sessions (
