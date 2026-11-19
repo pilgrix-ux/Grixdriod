@@ -39,6 +39,12 @@ type CloudDevice = {
   created_at: string;
 };
 
+type CloudDeviceAction = {
+  id: string;
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+  failure_reason: string | null;
+};
+
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 const WHEP_BASE_URL = (import.meta.env.VITE_GRIXDROID_WHEP_BASE_URL || '').replace(/\/+$/, '');
@@ -247,6 +253,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     get<HTMLButtonElement>('#grix-cloud-devtools-show').classList.remove('selected');
     get<HTMLButtonElement>('#grix-cloud-devtools-hide').classList.add('selected');
     get<HTMLElement>('#grix-cloud-phone-wrap').style.setProperty('--device-scale', '1');
+    get<HTMLElement>('#grix-cloud-phone-wrap').style.setProperty('--device-ratio', '9 / 16');
     get<HTMLElement>('#grix-cloud-viewer-menu').setAttribute('aria-expanded', 'true');
     get<HTMLElement>('#grix-cloud-detail-device').textContent = 'Pixel 7 · ' + device.name;
     get<HTMLElement>('#grix-cloud-detail-android').textContent = device.android_release ? 'Android ' + device.android_release : 'Not reported';
@@ -349,15 +356,33 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     });
     const uploadPayload = await readPayload(upload);
     if (!upload.ok) throw new Error(responseMessage(uploadPayload));
-    await restRequest<unknown>('/cloud_device_actions', {
+    const safeFilename = file.name.replace(/[^A-Za-z0-9._ -]/g, '_');
+    const queued = await restRequest<CloudDeviceAction[]>('/cloud_device_actions', {
       method: 'POST',
-      headers: { Prefer: 'return=minimal' },
+      headers: { Prefer: 'return=representation' },
       body: JSON.stringify({
         device_id: viewerDeviceId,
-        command: { type: 'install_apk', object_path: objectPath, filename: file.name },
+        command: { type: 'install_apk', object_path: objectPath, filename: safeFilename },
       }),
     });
-    viewerInputStatus.textContent = 'APK uploaded. Install command queued for the Android worker.';
+    const actionId = queued?.[0]?.id;
+    if (!actionId) throw new Error('The APK was uploaded, but the worker command could not be queued.');
+    viewerInputStatus.textContent = 'APK uploaded. Waiting for Android package installation…';
+    const deadline = Date.now() + 180_000;
+    while (Date.now() < deadline) {
+      const [action] = await restRequest<CloudDeviceAction[]>(
+        '/cloud_device_actions?id=eq.' + encodeURIComponent(actionId) + '&select=id,status,failure_reason',
+      );
+      if (action?.status === 'completed') {
+        viewerInputStatus.textContent = 'APK installed successfully on the Android device.';
+        return;
+      }
+      if (action?.status === 'failed') {
+        throw new Error(action.failure_reason || 'Android package installation failed.');
+      }
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 1200));
+    }
+    viewerInputStatus.textContent = 'APK upload is complete. The worker is still processing the install request; refresh the device later to confirm.';
   }
 
   function responseMessage(payload: unknown): string {
