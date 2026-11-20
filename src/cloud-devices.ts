@@ -25,7 +25,6 @@ type DeviceRequest = {
   profile: 'compact' | 'standard';
   status: 'queued' | 'claimed' | 'starting' | 'fulfilled' | 'failed' | 'cancelled';
   created_at: string;
-  failure_reason?: string | null;
 };
 
 type CloudDevice = {
@@ -61,7 +60,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '<div class="grix-cloud-heading">',
     '  <div><div class="grix-cloud-eyebrow">GRIXDROID CLOUD</div><h2>Android workspace</h2>',
     '  <p>Manage your cloud Android devices and open their live screens.</p></div>',
-    '  <span class="grix-cloud-status" id="grix-cloud-status">NOT CONFIGURED</span>',
+    '  <span class="grix-cloud-status" id="grix-cloud-status">TEMPORARILY UNAVAILABLE</span>',
     '</div>',
     '<div class="grix-cloud-notice" id="grix-cloud-notice" role="status"></div>',
     '<div class="grix-cloud-auth" id="grix-cloud-auth">',
@@ -191,7 +190,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   function setSignedIn(email: string | undefined): void {
     authPanel.hidden = Boolean(authSession);
     dashboard.hidden = !authSession;
-    status.textContent = authSession ? 'ACCOUNT CONNECTED' : configured ? 'SIGN IN REQUIRED' : 'NOT CONFIGURED';
+    status.textContent = authSession ? 'ACCOUNT CONNECTED' : configured ? 'SIGN IN REQUIRED' : 'TEMPORARILY UNAVAILABLE';
     status.classList.toggle('connected', Boolean(authSession));
     accountLabel.textContent = email ? 'Signed in as ' + email : 'Signed in';
   }
@@ -386,6 +385,33 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     viewerInputStatus.textContent = 'APK upload is complete. The worker is still processing the install request; refresh the device later to confirm.';
   }
 
+  function userFacingError(error: unknown, fallback: string): string {
+    const message = error && typeof error === 'object' && 'message' in error
+      ? String((error as { message?: unknown }).message ?? '')
+      : String(error ?? '');
+    const normalized = message.toLowerCase();
+
+    if (/invalid login credentials|invalid_credentials|invalid_grant|invalid password/.test(normalized)) {
+      return 'The email or password is incorrect.';
+    }
+    if (/email not confirmed|email_not_confirmed/.test(normalized)) {
+      return 'Please confirm your email address before signing in.';
+    }
+    if (/already registered|user already exists|email already exists/.test(normalized)) {
+      return 'An account with this email already exists. Sign in instead.';
+    }
+    if (/too many requests|rate limit|over_email_send_rate_limit/.test(normalized)) {
+      return 'Too many attempts. Please wait a moment and try again.';
+    }
+    if (/session expired|jwt expired/.test(normalized)) {
+      return 'Your session expired. Please sign in again.';
+    }
+    if (/failed to fetch|networkerror|network request failed|not_found|fra1::|vercel|internal server error|bad gateway|service unavailable|gateway timeout|\b(500|502|503|504)\b/.test(normalized)) {
+      return 'GRIXDroid is temporarily unavailable. Please try again shortly.';
+    }
+    return fallback;
+  }
+
   function responseMessage(payload: unknown): string {
     if (typeof payload === 'string') return payload;
     if (payload && typeof payload === 'object') {
@@ -513,7 +539,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
           try {
             await openViewer(device);
           } catch (error) {
-            setNotice(error instanceof Error ? error.message : 'Unable to open the Android stream.', 'error');
+            setNotice(userFacingError(error, 'Unable to open the Android stream.'), 'error');
           } finally {
             watch.disabled = false;
           }
@@ -539,10 +565,10 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       const detail = document.createElement('p');
       detail.textContent = item.profile + ' profile · Requested ' + new Date(item.created_at).toLocaleString();
       card.append(top, detail);
-      if (item.failure_reason) {
+      if (item.status === 'failed') {
         const reason = document.createElement('p');
         reason.className = 'grix-cloud-error-detail';
-        reason.textContent = item.failure_reason;
+        reason.textContent = 'We could not start this device. Please try again later.';
         card.append(reason);
       }
       if (item.status === 'queued') {
@@ -557,7 +583,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
             await reload();
             setNotice('Provisioning request cancelled.', 'success');
           } catch (error) {
-            setNotice(error instanceof Error ? error.message : 'Unable to cancel request.', 'error');
+            setNotice(userFacingError(error, 'Unable to cancel request.'), 'error');
             cancel.disabled = false;
           }
         });
@@ -572,7 +598,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     if (!authSession) return;
     const [devices, requests] = await Promise.all([
       restRequest<CloudDevice[]>('/cloud_devices?select=id,name,profile,android_release,state,storage_state,storage_bytes,stream_state,created_at&order=created_at.desc'),
-      restRequest<DeviceRequest[]>('/cloud_device_requests?select=id,name,profile,status,created_at,failure_reason&order=created_at.desc'),
+      restRequest<DeviceRequest[]>('/cloud_device_requests?select=id,name,profile,status,created_at&order=created_at.desc'),
     ]);
     renderDevices(devices);
     renderRequests(requests);
@@ -580,7 +606,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
 
   if (!configured) {
     setSignedIn(undefined);
-    setNotice('Cloud account setup is not connected yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to the Vite environment. Never put a service-role key in the browser.', 'info');
+    setNotice('Sign-in is temporarily unavailable. Please try again later.', 'info');
     authForm.hidden = true;
     return;
   }
@@ -615,7 +641,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     } catch (error) {
       authSession = null;
       setSignedIn(undefined);
-      setNotice(error instanceof Error ? error.message : 'Unable to authenticate.', 'error');
+      setNotice(userFacingError(error, 'Unable to authenticate.'), 'error');
     } finally {
       busy = false;
       authSubmit.disabled = false;
@@ -650,7 +676,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       await reload();
       setNotice('Request saved to your account. It will remain queued until a compatible Android worker accepts it.', 'success');
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Unable to submit the provisioning request.', 'error');
+      setNotice(userFacingError(error, 'Unable to submit the provisioning request.'), 'error');
     } finally {
       busy = false;
       requestSubmit.disabled = false;
@@ -662,7 +688,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       await reload();
       setNotice('Device information refreshed.', 'success');
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Unable to refresh devices.', 'error');
+      setNotice(userFacingError(error, 'Unable to refresh devices.'), 'error');
     }
   });
 
@@ -730,7 +756,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       : { type: 'tap', x: end.x, y: end.y };
 
     void sendViewerCommand(command).catch((error) => {
-      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Android input could not be sent.';
+      viewerInputStatus.textContent = userFacingError(error, 'Android input could not be sent.');
     });
   });
 
@@ -739,12 +765,12 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
 
   get<HTMLButtonElement>('#grix-cloud-action-home').addEventListener('click', () => {
     void sendViewerCommand({ type: 'key', key: 'HOME' }).catch((error) => {
-      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Home command failed.';
+      viewerInputStatus.textContent = userFacingError(error, 'Home command failed.');
     });
   });
   get<HTMLButtonElement>('#grix-cloud-action-power').addEventListener('click', () => {
     void sendViewerCommand({ type: 'key', key: 'POWER' }).catch((error) => {
-      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Power command failed.';
+      viewerInputStatus.textContent = userFacingError(error, 'Power command failed.');
     });
   });
   get<HTMLButtonElement>('#grix-cloud-action-rotate').addEventListener('click', () => {
@@ -754,7 +780,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       viewerInputStatus.textContent = 'Android display rotated to ' + screenOrientation + '.';
     }).catch((error) => {
       screenOrientation = screenOrientation === 'portrait' ? 'landscape' : 'portrait';
-      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Rotation failed.';
+      viewerInputStatus.textContent = userFacingError(error, 'Rotation failed.');
     });
   });
   get<HTMLButtonElement>('#grix-cloud-action-edit').addEventListener('click', () => {
@@ -768,7 +794,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     nightModeEnabled = !nightModeEnabled;
     void sendViewerCommand({ type: 'night_mode', enabled: nightModeEnabled }).catch((error) => {
       nightModeEnabled = !nightModeEnabled;
-      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Dark mode could not be changed.';
+      viewerInputStatus.textContent = userFacingError(error, 'Dark mode could not be changed.');
     });
   });
   get<HTMLButtonElement>('#grix-cloud-action-font').addEventListener('click', () => {
@@ -777,12 +803,12 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       viewerInputStatus.textContent = 'Android text size set to ' + Math.round(fontScales[fontScaleIndex] * 100) + '%.';
     }).catch((error) => {
       fontScaleIndex = (fontScaleIndex + fontScales.length - 1) % fontScales.length;
-      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Text size could not be changed.';
+      viewerInputStatus.textContent = userFacingError(error, 'Text size could not be changed.');
     });
   });
   get<HTMLButtonElement>('#grix-cloud-action-fingerprint').addEventListener('click', () => {
     void sendViewerCommand({ type: 'fingerprint' }).catch((error) => {
-      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Fingerprint simulation failed.';
+      viewerInputStatus.textContent = userFacingError(error, 'Fingerprint simulation failed.');
     });
   });
   get<HTMLButtonElement>('#grix-cloud-action-upload').addEventListener('click', () => {
@@ -796,7 +822,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     try {
       await uploadAndInstallApk(file);
     } catch (error) {
-      viewerInputStatus.textContent = error instanceof Error ? error.message : 'APK installation request failed.';
+      viewerInputStatus.textContent = userFacingError(error, 'APK installation request failed.');
     }
   });
   get<HTMLButtonElement>('#grix-cloud-action-vibrate').disabled = true;
@@ -805,7 +831,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     if (event.key === 'Escape' || event.key === 'Backspace') {
       event.preventDefault();
       void sendViewerCommand({ type: 'key', key: 'BACK' }).catch((error) => {
-        viewerInputStatus.textContent = error instanceof Error ? error.message : 'Back command failed.';
+        viewerInputStatus.textContent = userFacingError(error, 'Back command failed.');
       });
     }
   });
@@ -817,7 +843,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     void sendViewerCommand({ type: 'text', text }).then(() => {
       viewerTextInput.value = '';
     }).catch((error) => {
-      viewerInputStatus.textContent = error instanceof Error ? error.message : 'Text could not be sent to Android.';
+      viewerInputStatus.textContent = userFacingError(error, 'Text could not be sent to Android.');
     });
   });
 
