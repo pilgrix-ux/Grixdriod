@@ -1128,8 +1128,13 @@ body::before { display: none; }
 .grix-cloud-google:focus-visible { outline: 3px solid rgba(108,85,217,.25); outline-offset: 3px; }
 .grix-cloud-google:disabled { cursor: wait; opacity: .7; }
 .grix-cloud-google-mark {
-  display: grid; width: 29px; height: 29px; place-items: center; border: 1px solid #edf0f4;
-  border-radius: 8px; color: #4285f4; background: #fff; font: 900 1.25rem/1 Arial,sans-serif;
+  display: block;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .grix-cloud-google-arrow { margin-left: auto; color: #8d97a7; font-size: 1.3rem; }
 .grix-cloud-auth-caption { margin: .85rem 0 0; color: #929baa; font-size: .75rem; text-align: center; }
@@ -1299,14 +1304,12 @@ body::before { display: none; }
   transform: translateY(-1px);
 }
 .grix-cloud-welcome .grix-cloud-google-mark {
-  width: 25px;
-  height: 25px;
+  display: block;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
   border: 0;
-  background: linear-gradient(135deg, #4285f4 15%, #34a853 42%, #fbbc05 66%, #ea4335 88%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-size: 1.35rem;
+  background: transparent;
 }
 .grix-cloud-welcome .grix-cloud-auth-caption {
   margin: .8rem 0 0;
