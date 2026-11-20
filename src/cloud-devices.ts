@@ -518,37 +518,100 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
   }
 
+  function readOAuthVerifierCookie(): string | null {
+    const prefix = encodeURIComponent(GOOGLE_OAUTH_VERIFIER_KEY) + '=';
+    const item = document.cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith(prefix));
+    return item ? decodeURIComponent(item.slice(prefix.length)) : null;
+  }
+
+  function clearOAuthVerifier(): void {
+    try { sessionStorage.removeItem(GOOGLE_OAUTH_VERIFIER_KEY); } catch { /* Storage may be blocked. */ }
+    try { localStorage.removeItem(GOOGLE_OAUTH_VERIFIER_KEY); } catch { /* Storage may be blocked. */ }
+    try {
+      document.cookie = encodeURIComponent(GOOGLE_OAUTH_VERIFIER_KEY) + '=; Path=/; Max-Age=0; SameSite=Lax; Secure';
+    } catch { /* Cookie storage may be blocked. */ }
+  }
+
+  function storeOAuthVerifier(verifier: string): void {
+    clearOAuthVerifier();
+
+    try {
+      sessionStorage.setItem(GOOGLE_OAUTH_VERIFIER_KEY, verifier);
+      return;
+    } catch { /* Fall back to the other browser storage mechanisms. */ }
+
+    try {
+      localStorage.setItem(GOOGLE_OAUTH_VERIFIER_KEY, verifier);
+      return;
+    } catch { /* Fall back to a short-lived same-site cookie. */ }
+
+    try {
+      document.cookie = encodeURIComponent(GOOGLE_OAUTH_VERIFIER_KEY) + '='
+        + encodeURIComponent(verifier) + '; Path=/; Max-Age=300; SameSite=Lax; Secure';
+      if (readOAuthVerifierCookie() === verifier) return;
+    } catch { /* Fall through to a clear browser-storage error. */ }
+
+    throw new Error('This browser is blocking temporary sign-in storage. Enable cookies and site storage for GRIXDroid, then try again.');
+  }
+
+  function takeOAuthVerifier(): string | null {
+    let verifier: string | null = null;
+    try { verifier = sessionStorage.getItem(GOOGLE_OAUTH_VERIFIER_KEY); } catch { /* Try fallback storage. */ }
+    if (!verifier) {
+      try { verifier = localStorage.getItem(GOOGLE_OAUTH_VERIFIER_KEY); } catch { /* Try cookie storage. */ }
+    }
+    if (!verifier) {
+      try { verifier = readOAuthVerifierCookie(); } catch { /* Ignore inaccessible cookies. */ }
+    }
+    clearOAuthVerifier();
+    return verifier;
+  }
+
   async function beginGoogleSignIn(): Promise<void> {
     if (!configured || busy) return;
-    if (!window.crypto?.subtle) {
-      setNotice('This browser does not support secure Google sign-in. Please use a current browser over HTTPS.', 'error');
+    if (!window.isSecureContext || !window.crypto?.getRandomValues || !window.crypto?.subtle) {
+      setNotice('Secure Google sign-in needs a modern browser on an HTTPS connection. Open GRIXDroid in Chrome and try again.', 'error');
       return;
     }
 
+    let stage = 'preparing a secure sign-in challenge';
     googleButton.disabled = true;
     googleButton.textContent = 'Connecting to Google…';
     setNotice('Preparing secure Google sign-in…');
     try {
       const random = new Uint8Array(32);
-      crypto.getRandomValues(random);
+      window.crypto.getRandomValues(random);
       const verifier = base64Url(random);
-      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+      const verifierBytes = new Uint8Array(verifier.length);
+      for (let index = 0; index < verifier.length; index += 1) {
+        verifierBytes[index] = verifier.charCodeAt(index);
+      }
+      const digest = await window.crypto.subtle.digest('SHA-256', verifierBytes);
       const challenge = base64Url(new Uint8Array(digest));
-      sessionStorage.setItem(GOOGLE_OAUTH_VERIFIER_KEY, verifier);
 
-      const redirectTo = window.location.origin + window.location.pathname;
-      const authorizeUrl = new URL(authBase + '/authorize');
+      stage = 'saving the temporary sign-in verifier';
+      storeOAuthVerifier(verifier);
+
+      stage = 'building the Supabase authorization URL';
+      const supabaseOrigin = new URL(SUPABASE_URL);
+      if (supabaseOrigin.protocol !== 'https:' && supabaseOrigin.hostname !== 'localhost') {
+        throw new Error('The configured Supabase URL must use HTTPS.');
+      }
+      const authorizeUrl = new URL('/auth/v1/authorize', supabaseOrigin.origin);
       authorizeUrl.searchParams.set('provider', 'google');
-      authorizeUrl.searchParams.set('redirect_to', redirectTo);
+      authorizeUrl.searchParams.set('redirect_to', window.location.origin + window.location.pathname);
       authorizeUrl.searchParams.set('code_challenge', challenge);
       authorizeUrl.searchParams.set('code_challenge_method', 's256');
       authorizeUrl.searchParams.set('scopes', 'openid email profile');
-      window.location.assign(authorizeUrl.toString());
-    } catch {
-      sessionStorage.removeItem(GOOGLE_OAUTH_VERIFIER_KEY);
+
+      stage = 'opening Google sign-in';
+      window.location.href = authorizeUrl.toString();
+    } catch (error) {
+      clearOAuthVerifier();
       googleButton.disabled = false;
       googleButton.innerHTML = '<span class="grix-cloud-google-mark" aria-hidden="true">G</span><span>Continue with Google</span>';
-      setNotice('Google sign-in could not be started. Please try again.', 'error');
+      const detail = error instanceof Error && error.message ? error.message : 'Unknown browser error';
+      setNotice('Google sign-in stopped while ' + stage + ': ' + detail, 'error');
     }
   }
 
@@ -577,8 +640,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       return true;
     }
 
-    const verifier = sessionStorage.getItem(GOOGLE_OAUTH_VERIFIER_KEY);
-    sessionStorage.removeItem(GOOGLE_OAUTH_VERIFIER_KEY);
+    const verifier = takeOAuthVerifier();
     if (!verifier) {
       setNotice('Your Google sign-in session expired. Please start again.', 'error');
       return true;
