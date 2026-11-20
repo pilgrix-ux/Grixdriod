@@ -66,35 +66,20 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '</header>',
     '<div class="grix-cloud-notice" id="grix-cloud-notice" role="status"></div>',
     '<section class="grix-cloud-welcome" id="grix-cloud-welcome">',
-    '  <div class="grix-cloud-welcome-copy">',
-    '    <div class="grix-cloud-eyebrow">YOUR PRIVATE ANDROID WORKSPACE</div>',
-    '    <h1>Android, ready for your next idea.</h1>',
-    '    <p class="grix-cloud-lead">A focused space to access your Android devices, manage builds, and continue your work from one place.</p>',
-    '    <div class="grix-cloud-auth" id="grix-cloud-auth">',
-    '      <button class="grix-cloud-google" id="grix-cloud-google" type="button"><span class="grix-cloud-google-mark" aria-hidden="true">G</span><span>Continue with Google</span><span class="grix-cloud-google-arrow" aria-hidden="true">→</span></button>',
-    '      <p class="grix-cloud-auth-caption">Secure sign-in with your Google account.</p>',
-    '    </div>',
-    '    <div class="grix-cloud-trust-row"><span>PRIVATE BY DEFAULT</span><i></i><span>ONE-STEP SIGN IN</span></div>',
-    '  </div>',
-    '  <aside class="grix-cloud-product-preview" aria-label="GRIXDroid workspace preview">',
-    '    <div class="grix-cloud-preview-window">',
-    '      <div class="grix-cloud-preview-top"><div class="grix-cloud-preview-brand"><span>G</span><strong>GRIXDROID</strong></div><span class="grix-cloud-preview-private">PRIVATE WORKSPACE</span></div>',
-    '      <div class="grix-cloud-preview-body">',
-    '        <nav class="grix-cloud-preview-nav" aria-label="Workspace sections"><span class="active"><i>▦</i>Overview</span><span><i>▣</i>Devices</span><span><i>↥</i>App builds</span><span><i>⌘</i>Sessions</span></nav>',
-    '        <div class="grix-cloud-preview-content">',
-    '          <div class="grix-cloud-preview-heading"><small>WORKSPACE</small><strong>Your Android toolkit.</strong><span>Everything in one place.</span></div>',
-    '          <div class="grix-cloud-preview-grid">',
-    '            <article><span class="grix-cloud-preview-icon lavender">▣</span><strong>Devices</strong><small>Manage Android environments</small></article>',
-    '            <article><span class="grix-cloud-preview-icon blue">↥</span><strong>App builds</strong><small>Keep your builds organized</small></article>',
-    '            <article><span class="grix-cloud-preview-icon green">⌘</span><strong>Sessions</strong><small>Return to your workspace</small></article>',
-    '          </div>',
-    '          <div class="grix-cloud-preview-footer"><span class="grix-cloud-preview-dot"></span><span>Your workspace is ready when you are.</span></div>',
-    '        </div>',
+    '  <div class="grix-cloud-welcome-inner">',
+    '    <div class="grix-cloud-welcome-copy">',
+    '      <div class="grix-cloud-eyebrow">YOUR PRIVATE ANDROID WORKSPACE</div>',
+    '      <h1>Welcome to GRIXDroid.</h1>',
+    '      <p class="grix-cloud-lead">Your Android devices, app builds and sessions — all in one focused workspace.</p>',
+    '      <div class="grix-cloud-auth" id="grix-cloud-auth">',
+    '        <button class="grix-cloud-google" id="grix-cloud-google" type="button"><span class="grix-cloud-google-mark" aria-hidden="true">G</span><span>Continue with Google</span></button>',
+    '        <p class="grix-cloud-auth-caption">Secure sign-in with your Google account.</p>',
     '      </div>',
+    '      <div class="grix-cloud-trust-row"><span>SECURE GOOGLE SIGN-IN</span><i></i><span>PRIVATE WORKSPACE</span></div>',
     '    </div>',
-    '    <div class="grix-cloud-preview-caption">A simpler way to work with Android.</div>',
-    '  </aside>',
+    '  </div>',
     '</section>',
+
     '<div class="grix-cloud-dashboard" id="grix-cloud-dashboard" hidden>',
     '  <div class="grix-cloud-toolbar"><span id="grix-cloud-account"></span><div><button class="grix-cloud-secondary" id="grix-cloud-refresh" type="button">Refresh</button><button class="grix-cloud-secondary" id="grix-cloud-signout" type="button">Sign out</button></div></div>',
     '  <div class="grix-cloud-section-heading"><div><h3>Cloud devices</h3><p>Devices are owned by your account.</p></div></div>',
@@ -996,7 +981,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     const restoredSession = restoreSession();
     if (!restoredSession) {
       setSignedIn(undefined);
-      setNotice('Sign in to view the private cloud devices attached to your account.');
+      setNotice('');
       return;
     }
     authSession = restoredSession;
