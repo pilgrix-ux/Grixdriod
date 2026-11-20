@@ -1,4 +1,5 @@
 import './cloud-devices.css';
+import './workspace.css';
 
 type AuthSession = {
   access_token: string;
@@ -58,8 +59,8 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   root.className = 'grix-cloud-panel';
   root.innerHTML = [
     '<div class="grix-cloud-heading">',
-    '  <div><div class="grix-cloud-eyebrow">GRIXDROID CLOUD</div><h2>My Android devices</h2>',
-    '  <p>Private device records, persistent-storage metadata and cross-device access.</p></div>',
+    '  <div><div class="grix-cloud-eyebrow">GRIXDROID CLOUD</div><h2>Android workspace</h2>',
+    '  <p>Manage your cloud Android devices and open their live screens.</p></div>',
     '  <span class="grix-cloud-status" id="grix-cloud-status">NOT CONFIGURED</span>',
     '</div>',
     '<div class="grix-cloud-notice" id="grix-cloud-notice" role="status"></div>',
@@ -95,7 +96,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '        <div class="grix-appetize-setting-row"><div><strong>Show Developer Tools</strong><small>Android version, screen, storage and stream details</small></div><div class="grix-appetize-show-hide"><button id="grix-cloud-devtools-show" type="button">Show</button><button id="grix-cloud-devtools-hide" class="selected" type="button">Hide</button></div></div>',
     '      </section>',
     '      <section class="grix-appetize-device-area">',
-    '        <div class="grix-appetize-app-title"><span class="grix-appetize-app-checkbox"></span><strong id="grix-cloud-viewer-title">Website Preview</strong><span class="grix-appetize-app-version">v1.0</span></div>',
+    '        <div class="grix-appetize-app-title"><span class="grix-appetize-app-checkbox"></span><strong id="grix-cloud-viewer-title">Android device preview</strong><span class="grix-appetize-app-version">v1.0</span></div>',
     '        <div class="grix-appetize-device-stage">',
     '          <div class="grix-appetize-phone-wrap" id="grix-cloud-phone-wrap">',
     '            <div class="grix-appetize-phone-frame"><span class="grix-appetize-camera" aria-hidden="true"></span><video id="grix-cloud-viewer-video" autoplay playsinline muted tabindex="0" aria-label="Live Android phone screen. Tap or swipe to control Android."></video></div>',
@@ -124,10 +125,10 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '      <section class="grix-appetize-devtools" id="grix-cloud-devtools" hidden aria-label="Android developer information">',
     '        <div class="grix-appetize-devtools-title">DEVELOPER TOOLS <span>LIVE RUNTIME INSPECTOR</span></div>',
     '        <dl>',
-    '          <div><dt>Virtual device</dt><dd id="grix-cloud-detail-device">Pixel 7</dd></div>',
-    '          <div><dt>Android version</dt><dd id="grix-cloud-detail-android">Android 15</dd></div>',
-    '          <div><dt>Profile</dt><dd id="grix-cloud-detail-profile">Standard</dd></div>',
-    '          <div><dt>Device state</dt><dd id="grix-cloud-detail-state">Running</dd></div>',
+    '          <div><dt>Virtual device</dt><dd id="grix-cloud-detail-device">No device selected</dd></div>',
+    '          <div><dt>Android version</dt><dd id="grix-cloud-detail-android">Not reported</dd></div>',
+    '          <div><dt>Profile</dt><dd id="grix-cloud-detail-profile">—</dd></div>',
+    '          <div><dt>Device state</dt><dd id="grix-cloud-detail-state">Waiting</dd></div>',
     '          <div><dt>Stream</dt><dd id="grix-cloud-detail-stream">WebRTC</dd></div>',
     '          <div><dt>Storage</dt><dd id="grix-cloud-detail-storage">Persistent</dd></div>',
     '        </dl>',
@@ -135,7 +136,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '    </div>',
     '  </div>',
     '</div>',
-    '<div class="grix-cloud-footnote">Device requests are handled by a separately installed Android worker. A queued request is not a live Android device. Google Play availability depends on a properly authorized Android image; GRIXDroid does not bundle Google proprietary apps.</div>',
+    '<div class="grix-cloud-footnote">Live Android screens require an online Android worker and WebRTC stream. Queued device requests are not running emulators.</div>',
   ].join('');
 
   const header = app.querySelector('.header');
@@ -255,7 +256,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     get<HTMLElement>('#grix-cloud-phone-wrap').style.setProperty('--device-scale', '1');
     get<HTMLElement>('#grix-cloud-phone-wrap').style.setProperty('--device-ratio', '9 / 16');
     get<HTMLElement>('#grix-cloud-viewer-menu').setAttribute('aria-expanded', 'true');
-    get<HTMLElement>('#grix-cloud-detail-device').textContent = 'Pixel 7 · ' + device.name;
+    get<HTMLElement>('#grix-cloud-detail-device').textContent = 'Cloud Android · ' + device.name;
     get<HTMLElement>('#grix-cloud-detail-android').textContent = device.android_release ? 'Android ' + device.android_release : 'Not reported';
     get<HTMLElement>('#grix-cloud-detail-profile').textContent = device.profile;
     get<HTMLElement>('#grix-cloud-detail-state').textContent = device.state;

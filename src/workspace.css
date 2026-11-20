@@ -1,0 +1,126 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #172033;
+  background: #f4f5f7;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  display: block;
+  padding: 0;
+  background: #f4f5f7;
+  color: #172033;
+}
+
+body::before { content: none; }
+
+button, input, select { font: inherit; }
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+  padding: clamp(1rem, 3vw, 2.5rem);
+}
+
+.grix-cloud-panel {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: clamp(1.15rem, 3vw, 2rem);
+  border: 1px solid #e5e8ed;
+  border-radius: 18px;
+  background: #fff;
+  color: #172033;
+  box-shadow: 0 14px 42px rgba(15, 23, 42, .06);
+}
+
+.grix-cloud-eyebrow { color: #64748b; }
+.grix-cloud-heading h2 { color: #172033; font-size: clamp(1.55rem, 3vw, 2rem); letter-spacing: -.035em; }
+.grix-cloud-heading p,
+.grix-cloud-section-heading p,
+.grix-cloud-request-box p { color: #718096; }
+
+.grix-cloud-status,
+.grix-cloud-state {
+  color: #566276;
+  border-color: #e1e6ed;
+  background: #f7f8fa;
+}
+
+.grix-cloud-notice {
+  color: #475569;
+  border-color: #e6eaf0;
+  background: #f8fafc;
+}
+.grix-cloud-notice.success { color: #166534; }
+.grix-cloud-notice.error { color: #991b1b; }
+
+.grix-cloud-auth { max-width: 480px; }
+.grix-cloud-auth-form label,
+.grix-cloud-request-form label { color: #475569; }
+
+.grix-cloud-auth-form input,
+.grix-cloud-request-form input,
+.grix-cloud-request-form select {
+  color: #172033;
+  border-color: #dce2e9;
+  background: #fff;
+}
+.grix-cloud-auth-form input:focus,
+.grix-cloud-request-form input:focus,
+.grix-cloud-request-form select:focus {
+  border-color: #64748b;
+  box-shadow: 0 0 0 3px rgba(100, 116, 139, .12);
+}
+
+.grix-cloud-primary { background: #172033; }
+.grix-cloud-primary:hover { background: #26344c; }
+.grix-cloud-secondary {
+  color: #334155;
+  border-color: #dfe4eb;
+  background: #fff;
+}
+.grix-cloud-link { color: #475569; }
+
+.grix-cloud-toolbar { border-color: #edf0f3; }
+.grix-cloud-toolbar span { color: #64748b; }
+.grix-cloud-device-card,
+.grix-cloud-request-card {
+  border-color: #e5e9ef;
+  background: #fff;
+}
+.grix-cloud-card-top strong,
+.grix-cloud-section-heading h3,
+.grix-cloud-request-box h3 { color: #172033; }
+.grix-cloud-device-card p,
+.grix-cloud-request-card p { color: #64748b; }
+
+.grix-cloud-request-box {
+  border-color: #e5e9ef;
+  background: #f8fafc;
+}
+.grix-cloud-empty { color: #7b8797; }
+
+.grix-cloud-footnote {
+  color: #8a94a3;
+  border-color: #edf0f3;
+}
+
+.grix-cloud-viewer {
+  background: #fff;
+  color: #172033;
+}
+
+@media (max-width: 640px) {
+  #app { padding: .7rem; }
+  .grix-cloud-panel { padding: 1rem; border-radius: 14px; }
+}
