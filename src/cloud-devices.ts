@@ -68,6 +68,22 @@ function normalizeSupabaseUrl(value: string): string | null {
 
 const SUPABASE_URL = normalizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL || '') || DEFAULT_SUPABASE_URL;
 const SUPABASE_KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim() || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
+const DEFAULT_GRIXDROID_SITE_URL = 'https://grixdriod.vercel.app';
+
+function normalizeGrixdroidSiteUrl(value: string): string | null {
+  const cleaned = value.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '');
+  if (!cleaned) return null;
+  try {
+    const parsed = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(cleaned) ? cleaned : 'https://' + cleaned);
+    if (parsed.protocol !== 'https:' || !parsed.hostname) return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+const GRIXDROID_SITE_URL = normalizeGrixdroidSiteUrl(import.meta.env.VITE_GRIXDROID_SITE_URL || '') || DEFAULT_GRIXDROID_SITE_URL;
+const GOOGLE_SIGNIN_START_PARAM = 'grix-google-start';
 const WHEP_BASE_URL = (import.meta.env.VITE_GRIXDROID_WHEP_BASE_URL || '').replace(/\/+$/, '');
 const configured = Boolean(SUPABASE_URL && SUPABASE_KEY);
 const authBase = SUPABASE_URL + '/auth/v1';
@@ -589,6 +605,15 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
 
   async function beginGoogleSignIn(): Promise<void> {
     if (!configured || busy) return;
+
+    const canonicalSite = new URL(GRIXDROID_SITE_URL);
+    if (window.location.origin !== canonicalSite.origin) {
+      const startOnProduction = new URL('/', canonicalSite.origin);
+      startOnProduction.searchParams.set(GOOGLE_SIGNIN_START_PARAM, '1');
+      window.location.assign(startOnProduction.toString());
+      return;
+    }
+
     if (!window.isSecureContext || !window.crypto?.getRandomValues || !window.crypto?.subtle) {
       setNotice('Secure Google sign-in needs a modern browser on an HTTPS connection. Open GRIXDroid in Chrome and try again.', 'error');
       return;
@@ -619,7 +644,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       }
       const authorizeUrl = new URL('/auth/v1/authorize', supabaseOrigin.origin);
       authorizeUrl.searchParams.set('provider', 'google');
-      authorizeUrl.searchParams.set('redirect_to', window.location.origin + window.location.pathname);
+      authorizeUrl.searchParams.set('redirect_to', new URL('/', GRIXDROID_SITE_URL).toString());
       authorizeUrl.searchParams.set('code_challenge', challenge);
       authorizeUrl.searchParams.set('code_challenge_method', 's256');
       authorizeUrl.searchParams.set('scopes', 'openid email profile');
@@ -1061,6 +1086,14 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       setNotice('Google sign-in could not be completed. Please try again.', 'error');
     }
     if (callbackHandled) return;
+
+    const launchUrl = new URL(window.location.href);
+    if (launchUrl.searchParams.get(GOOGLE_SIGNIN_START_PARAM) === '1') {
+      launchUrl.searchParams.delete(GOOGLE_SIGNIN_START_PARAM);
+      window.history.replaceState({}, document.title, launchUrl.pathname + launchUrl.search + launchUrl.hash);
+      void beginGoogleSignIn();
+      return;
+    }
 
     const restoredSession = restoreSession();
     if (!restoredSession) {
