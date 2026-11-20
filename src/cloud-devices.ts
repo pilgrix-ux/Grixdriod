@@ -46,8 +46,10 @@ type CloudDeviceAction = {
   failure_reason: string | null;
 };
 
+const DEFAULT_SUPABASE_PROJECT_REF = 'olbqxgnhozafcckcoapx';
 const DEFAULT_SUPABASE_URL = 'https://olbqxgnhozafcckcoapx.supabase.co';
 const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_2SBpc33fTryZKwaSc6pl2w_yDZBJ22U';
+const GOOGLE_ICON_MARKUP = '<svg class="grix-cloud-google-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.74 7.18l7.73 6c4.51-4.18 7.05-10.33 7.05-17.65z"/><path fill="#34A853" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.75-4.59l-7.98-6.19C.91 16.67 0 20.21 0 24s.91 7.33 2.52 10.78l8.01-6.19z"/><path fill="#FBBC05" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.9 2.3-8.18 2.3-6.26 0-11.57-4.22-13.46-9.91l-8.01 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
 
 function normalizeSupabaseUrl(value: string): string | null {
   const cleaned = value.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '');
@@ -55,6 +57,7 @@ function normalizeSupabaseUrl(value: string): string | null {
   const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(cleaned) ? cleaned : 'https://' + cleaned;
   try {
     const parsed = new URL(candidate);
+    if (parsed.hostname.toLowerCase() === DEFAULT_SUPABASE_PROJECT_REF) return DEFAULT_SUPABASE_URL;
     if (!parsed.hostname || (parsed.protocol !== 'https:' && parsed.protocol !== 'http:')) return null;
     if (parsed.protocol === 'http:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') return null;
     return parsed.origin;
@@ -89,7 +92,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '      <h1>Welcome to GRIXDroid.</h1>',
     '      <p class="grix-cloud-lead">Your Android devices, app builds and sessions — all in one focused workspace.</p>',
     '      <div class="grix-cloud-auth" id="grix-cloud-auth">',
-    '        <button class="grix-cloud-google" id="grix-cloud-google" type="button"><span class="grix-cloud-google-mark" aria-hidden="true">G</span><span>Continue with Google</span></button>',
+    '        <button class="grix-cloud-google" id="grix-cloud-google" type="button">' + GOOGLE_ICON_MARKUP + '<span>Continue with Google</span></button>',
     '        <p class="grix-cloud-auth-caption">Secure sign-in with your Google account.</p>',
     '      </div>',
     '      <div class="grix-cloud-trust-row"><span>SECURE GOOGLE SIGN-IN</span><i></i><span>PRIVATE WORKSPACE</span></div>',
@@ -626,7 +629,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     } catch (error) {
       clearOAuthVerifier();
       googleButton.disabled = false;
-      googleButton.innerHTML = '<span class="grix-cloud-google-mark" aria-hidden="true">G</span><span>Continue with Google</span>';
+      googleButton.innerHTML = GOOGLE_ICON_MARKUP + '<span>Continue with Google</span>';
       if (import.meta.env.DEV) {
         console.error('[GRIXDroid] Google sign-in startup failed during ' + stage, error);
       }
