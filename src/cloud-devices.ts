@@ -455,10 +455,10 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     }
   }
 
-  function restoreSession(): string | undefined {
+  function restoreSession(): AuthSession | null {
     try {
       const raw = localStorage.getItem(SESSION_STORAGE_KEY);
-      if (!raw) return undefined;
+      if (!raw) return null;
       const stored = JSON.parse(raw) as Partial<AuthSession>;
       const validUserId = typeof stored.user_id === 'string'
         && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(stored.user_id);
@@ -469,20 +469,21 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
         || !validUserId
       ) {
         localStorage.removeItem(SESSION_STORAGE_KEY);
-        return undefined;
+        return null;
       }
-      authSession = {
+      const restored: AuthSession = {
         access_token: stored.access_token,
         refresh_token: stored.refresh_token,
         expires_at: stored.expires_at,
-        user_id: stored.user_id,
+        user_id: stored.user_id as string,
         email: typeof stored.email === 'string' ? stored.email : undefined,
       };
-      return authSession.email;
+      authSession = restored;
+      return restored;
     } catch {
       try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch { /* Ignore unavailable storage. */ }
       authSession = null;
-      return undefined;
+      return null;
     }
   }
 
@@ -567,6 +568,11 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     if (error) {
       sessionStorage.removeItem(GOOGLE_OAUTH_VERIFIER_KEY);
       setNotice('Google sign-in was not completed. Please try again.', 'error');
+      return true;
+    }
+    if (!code) {
+      sessionStorage.removeItem(GOOGLE_OAUTH_VERIFIER_KEY);
+      setNotice('Google sign-in could not be completed. Please start again.', 'error');
       return true;
     }
 
@@ -1018,17 +1024,18 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     }
     if (callbackHandled) return;
 
-    const restoredEmail = restoreSession();
-    if (!authSession) {
+    const restoredSession = restoreSession();
+    if (!restoredSession) {
       setSignedIn(undefined);
       setNotice('Sign in to view the private cloud devices attached to your account.');
       return;
     }
+    authSession = restoredSession;
 
-    setSignedIn(restoredEmail);
+    setSignedIn(restoredSession.email);
     setNotice('Restoring your private workspace…');
     try {
-      if (authSession.expires_at * 1000 - Date.now() < 60_000) {
+      if (restoredSession.expires_at * 1000 - Date.now() < 60_000) {
         if (!(await refreshSession()) || !authSession) throw new Error('Session expired.');
       }
       await reload();
