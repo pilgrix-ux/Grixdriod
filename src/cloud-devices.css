@@ -1028,3 +1028,52 @@
   .grix-appetize-device-area { padding-top: 1.5rem; }
   .grix-appetize-phone-frame { width: min(37vw, 460px); }
 }
+
+
+/* Google sign-in */
+.grix-cloud-google {
+  display: flex;
+  width: 100%;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: .7rem;
+  border: 1px solid rgba(148, 163, 184, .28);
+  border-radius: .7rem;
+  padding: .7rem 1rem;
+  color: #202124;
+  background: #fff;
+  font: 700 .82rem/1.2 ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.grix-cloud-google:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: rgba(148, 163, 184, .55);
+}
+.grix-cloud-google:active:not(:disabled) { transform: translateY(1px); }
+.grix-cloud-google:disabled { opacity: .65; cursor: wait; }
+.grix-cloud-google-mark {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  color: #4285f4;
+  font: 800 1.1rem/1 Arial, sans-serif;
+}
+.grix-cloud-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  margin: 1rem 0;
+  color: #82869c;
+  font: 700 .58rem/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: .12em;
+}
+.grix-cloud-auth-divider::before,
+.grix-cloud-auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(148, 163, 184, .18);
+}

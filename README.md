@@ -36,6 +36,10 @@ The worker code and optional WHIP/WHEP streaming integration are now in the repo
 
 To configure the workspace, copy `.env.example` to `.env.local`, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, and apply all three migrations in `supabase/migrations/` to a dedicated GRIXDroid Supabase project. Both `VITE_` values are public and are compiled into the browser bundle: use only the project URL and the `sb_publishable_...` key. Keep every `sb_secret_...` key and legacy `service_role` JWT in server-only worker environment variables. Enable and review Row Level Security for all exposed tables. The worker sends the `sb_secret_...` key in the `apikey` header and the legacy `service_role` JWT separately in the `Authorization` header. Supabase projects may require enabling the `public` schema in Data API settings before the website can query these tables.
 
+## Google sign-in
+
+The workspace supports Google sign-in through Supabase Auth using the PKCE authorization-code flow. Configure the Google OAuth web client in Supabase and add the app origin to Supabase Auth's redirect allow-list before using the button. Keep the Google client secret only in the Supabase provider settings. See [Google Auth setup](docs/GOOGLE_AUTH_SETUP.md).
+
 ## Self-hosted Android worker
 
 The cloud worker boots a genuine Android Emulator system image—not the browser-native ARM/Dalvik research runtime—for each queued device request. By default it uses Android 15 (API 35) with Google Play Store and Google Play services. It needs a persistent host with Android SDK Command-line Tools, Emulator, Platform Tools, the exact system image and durable storage. On boot it verifies Android system properties and the expected packages before reporting the device as ready.

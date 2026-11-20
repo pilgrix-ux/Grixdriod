@@ -6,6 +6,7 @@ type AuthSession = {
   refresh_token: string;
   expires_at: number;
   user_id: string;
+  email?: string;
 };
 
 type AuthResponse = {
@@ -50,6 +51,8 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 const WHEP_BASE_URL = (import.meta.env.VITE_GRIXDROID_WHEP_BASE_URL || '').replace(/\/+$/, '');
 const configured = Boolean(SUPABASE_URL && SUPABASE_KEY);
 const authBase = SUPABASE_URL + '/auth/v1';
+const SESSION_STORAGE_KEY = 'grixdroid.auth.session.v1';
+const GOOGLE_OAUTH_VERIFIER_KEY = 'grixdroid.google.oauth.verifier.v1';
 const restBase = SUPABASE_URL + '/rest/v1';
 
 export function mountCloudDevicesPanel(app: HTMLElement): void {
@@ -64,6 +67,8 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '</div>',
     '<div class="grix-cloud-notice" id="grix-cloud-notice" role="status"></div>',
     '<div class="grix-cloud-auth" id="grix-cloud-auth">',
+    '  <button class="grix-cloud-google" id="grix-cloud-google" type="button"><span class="grix-cloud-google-mark" aria-hidden="true">G</span><span>Continue with Google</span></button>',
+    '  <div class="grix-cloud-auth-divider"><span>OR CONTINUE WITH EMAIL</span></div>',
     '  <form id="grix-cloud-auth-form" class="grix-cloud-auth-form">',
     '    <label>Email address<input id="grix-cloud-email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"></label>',
     '    <label>Password<input id="grix-cloud-password" type="password" autocomplete="current-password" required minlength="8" maxlength="128" placeholder="At least 8 characters"></label>',
@@ -155,6 +160,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   const authForm = get<HTMLFormElement>('#grix-cloud-auth-form');
   const authSubmit = get<HTMLButtonElement>('#grix-cloud-auth-submit');
   const authToggle = get<HTMLButtonElement>('#grix-cloud-auth-toggle');
+  const googleButton = get<HTMLButtonElement>('#grix-cloud-google');
   const requestForm = get<HTMLFormElement>('#grix-cloud-request-form');
   const requestSubmit = get<HTMLButtonElement>('#grix-cloud-request-submit');
   const deviceList = get<HTMLElement>('#grix-cloud-device-list');
@@ -192,7 +198,8 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     dashboard.hidden = !authSession;
     status.textContent = authSession ? 'ACCOUNT CONNECTED' : configured ? 'SIGN IN REQUIRED' : 'TEMPORARILY UNAVAILABLE';
     status.classList.toggle('connected', Boolean(authSession));
-    accountLabel.textContent = email ? 'Signed in as ' + email : 'Signed in';
+    const accountEmail = email || authSession?.email;
+    accountLabel.textContent = accountEmail ? 'Signed in as ' + accountEmail : 'Signed in';
   }
 
   async function waitForIceGathering(peer: RTCPeerConnection): Promise<void> {
@@ -439,6 +446,46 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     return payload as AuthResponse;
   }
 
+  function persistSession(): void {
+    if (!authSession) return;
+    try {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(authSession));
+    } catch {
+      // The active in-memory session still works if browser storage is disabled.
+    }
+  }
+
+  function restoreSession(): string | undefined {
+    try {
+      const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!raw) return undefined;
+      const stored = JSON.parse(raw) as Partial<AuthSession>;
+      const validUserId = typeof stored.user_id === 'string'
+        && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(stored.user_id);
+      if (
+        typeof stored.access_token !== 'string'
+        || typeof stored.refresh_token !== 'string'
+        || typeof stored.expires_at !== 'number'
+        || !validUserId
+      ) {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        return undefined;
+      }
+      authSession = {
+        access_token: stored.access_token,
+        refresh_token: stored.refresh_token,
+        expires_at: stored.expires_at,
+        user_id: stored.user_id,
+        email: typeof stored.email === 'string' ? stored.email : undefined,
+      };
+      return authSession.email;
+    } catch {
+      try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch { /* Ignore unavailable storage. */ }
+      authSession = null;
+      return undefined;
+    }
+  }
+
   function acceptSession(payload: AuthResponse): boolean {
     if (!payload.access_token || !payload.refresh_token) return false;
     const lifetime = Math.max(60, Number(payload.expires_in) || 3600);
@@ -457,7 +504,96 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       refresh_token: payload.refresh_token,
       expires_at: Number(payload.expires_at) || Math.floor(Date.now() / 1000) + lifetime,
       user_id: userId,
+      email: payload.user?.email || authSession?.email,
     };
+    persistSession();
+    return true;
+  }
+
+  function base64Url(bytes: Uint8Array): string {
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  async function beginGoogleSignIn(): Promise<void> {
+    if (!configured || busy) return;
+    if (!window.crypto?.subtle) {
+      setNotice('This browser does not support secure Google sign-in. Please use a current browser over HTTPS.', 'error');
+      return;
+    }
+
+    googleButton.disabled = true;
+    googleButton.textContent = 'Connecting to Google…';
+    setNotice('Preparing secure Google sign-in…');
+    try {
+      const random = new Uint8Array(32);
+      crypto.getRandomValues(random);
+      const verifier = base64Url(random);
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+      const challenge = base64Url(new Uint8Array(digest));
+      sessionStorage.setItem(GOOGLE_OAUTH_VERIFIER_KEY, verifier);
+
+      const redirectTo = window.location.origin + window.location.pathname;
+      const authorizeUrl = new URL(authBase + '/authorize');
+      authorizeUrl.searchParams.set('provider', 'google');
+      authorizeUrl.searchParams.set('redirect_to', redirectTo);
+      authorizeUrl.searchParams.set('code_challenge', challenge);
+      authorizeUrl.searchParams.set('code_challenge_method', 's256');
+      authorizeUrl.searchParams.set('scopes', 'openid email profile');
+      window.location.assign(authorizeUrl.toString());
+    } catch {
+      sessionStorage.removeItem(GOOGLE_OAUTH_VERIFIER_KEY);
+      googleButton.disabled = false;
+      googleButton.innerHTML = '<span class="grix-cloud-google-mark" aria-hidden="true">G</span><span>Continue with Google</span>';
+      setNotice('Google sign-in could not be started. Please try again.', 'error');
+    }
+  }
+
+  function cleanOAuthCallbackUrl(url: URL): void {
+    for (const key of ['code', 'error', 'error_code', 'error_description', 'state', 'sb_flow_id']) {
+      url.searchParams.delete(key);
+    }
+    window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+  }
+
+  async function finishGoogleSignInRedirect(): Promise<boolean> {
+    const callbackUrl = new URL(window.location.href);
+    const code = callbackUrl.searchParams.get('code');
+    const error = callbackUrl.searchParams.get('error_description') || callbackUrl.searchParams.get('error');
+    if (!code && !error) return false;
+
+    cleanOAuthCallbackUrl(callbackUrl);
+    if (error) {
+      sessionStorage.removeItem(GOOGLE_OAUTH_VERIFIER_KEY);
+      setNotice('Google sign-in was not completed. Please try again.', 'error');
+      return true;
+    }
+
+    const verifier = sessionStorage.getItem(GOOGLE_OAUTH_VERIFIER_KEY);
+    sessionStorage.removeItem(GOOGLE_OAUTH_VERIFIER_KEY);
+    if (!verifier) {
+      setNotice('Your Google sign-in session expired. Please start again.', 'error');
+      return true;
+    }
+
+    setNotice('Finishing Google sign-in…');
+    try {
+      const payload = await authRequest('/token?grant_type=pkce', {
+        auth_code: code,
+        code_verifier: verifier,
+      });
+      if (!acceptSession(payload)) throw new Error('No session was returned.');
+      setSignedIn(payload.user?.email || authSession?.email);
+      setNotice('Google sign-in successful. Loading your workspace…', 'success');
+      await reload();
+      setNotice('You are signed in with Google. Your private workspace is ready.', 'success');
+    } catch {
+      authSession = null;
+      try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch { /* Ignore unavailable storage. */ }
+      setSignedIn(undefined);
+      setNotice('Google sign-in could not be completed. Please try again.', 'error');
+    }
     return true;
   }
 
@@ -469,6 +605,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       return acceptSession(payload);
     } catch {
       authSession = null;
+      try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch { /* Ignore unavailable storage. */ }
       return false;
     }
   }
@@ -605,11 +742,14 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   }
 
   if (!configured) {
+    googleButton.hidden = true;
     setSignedIn(undefined);
     setNotice('Sign-in is temporarily unavailable. Please try again later.', 'info');
     authForm.hidden = true;
     return;
   }
+
+  googleButton.addEventListener('click', () => { void beginGoogleSignIn(); });
 
   authForm.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -640,6 +780,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       }
     } catch (error) {
       authSession = null;
+      try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch { /* Ignore unavailable storage. */ }
       setSignedIn(undefined);
       setNotice(userFacingError(error, 'Unable to authenticate.'), 'error');
     } finally {
@@ -853,6 +994,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     await closeViewer();
     const current = authSession;
     authSession = null;
+    try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch { /* Ignore unavailable storage. */ }
     setSignedIn(undefined);
     addEmpty(deviceList, 'Sign in to view your cloud devices.');
     addEmpty(requestList, 'Sign in to view your requests.');
@@ -866,6 +1008,36 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     setNotice('Signed out. Your cloud device records remain stored in your account.', 'success');
   });
 
-  setSignedIn(undefined);
-  setNotice('Sign in to view the private cloud devices attached to your account.');
+  void (async () => {
+    let callbackHandled = false;
+    try {
+      callbackHandled = await finishGoogleSignInRedirect();
+    } catch {
+      callbackHandled = true;
+      setNotice('Google sign-in could not be completed. Please try again.', 'error');
+    }
+    if (callbackHandled) return;
+
+    const restoredEmail = restoreSession();
+    if (!authSession) {
+      setSignedIn(undefined);
+      setNotice('Sign in to view the private cloud devices attached to your account.');
+      return;
+    }
+
+    setSignedIn(restoredEmail);
+    setNotice('Restoring your private workspace…');
+    try {
+      if (authSession.expires_at * 1000 - Date.now() < 60_000) {
+        if (!(await refreshSession()) || !authSession) throw new Error('Session expired.');
+      }
+      await reload();
+      setNotice('Your private workspace is ready.', 'success');
+    } catch {
+      setNotice('Your session could not be restored. Please sign in again.', 'error');
+      authSession = null;
+      try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch { /* Ignore unavailable storage. */ }
+      setSignedIn(undefined);
+    }
+  })();
 }
