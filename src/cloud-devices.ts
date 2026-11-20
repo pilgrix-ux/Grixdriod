@@ -60,27 +60,46 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   root.id = 'grixdroid-cloud-devices';
   root.className = 'grix-cloud-panel';
   root.innerHTML = [
-    '<div class="grix-cloud-heading">',
-    '  <div><div class="grix-cloud-eyebrow">GRIXDROID CLOUD</div><h2>Android workspace</h2>',
-    '  <p>Manage your cloud Android devices and open their live screens.</p></div>',
-    '  <span class="grix-cloud-status" id="grix-cloud-status">TEMPORARILY UNAVAILABLE</span>',
-    '</div>',
+    '<header class="grix-cloud-heading">',
+    '  <div class="grix-cloud-brand"><span class="grix-cloud-brand-mark">G</span><div><strong>GRIXDROID</strong><small>ANDROID WORKSPACE</small></div></div>',
+    '  <span class="grix-cloud-status" id="grix-cloud-status">SIGN IN REQUIRED</span>',
+    '</header>',
     '<div class="grix-cloud-notice" id="grix-cloud-notice" role="status"></div>',
-    '<div class="grix-cloud-auth" id="grix-cloud-auth">',
-    '  <button class="grix-cloud-google" id="grix-cloud-google" type="button"><span class="grix-cloud-google-mark" aria-hidden="true">G</span><span>Continue with Google</span></button>',
-    '  <div class="grix-cloud-auth-divider"><span>OR CONTINUE WITH EMAIL</span></div>',
-    '  <form id="grix-cloud-auth-form" class="grix-cloud-auth-form">',
-    '    <label>Email address<input id="grix-cloud-email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"></label>',
-    '    <label>Password<input id="grix-cloud-password" type="password" autocomplete="current-password" required minlength="8" maxlength="128" placeholder="At least 8 characters"></label>',
-    '    <div class="grix-cloud-auth-actions"><button class="grix-cloud-primary" id="grix-cloud-auth-submit" type="submit">Sign in</button>',
-    '    <button class="grix-cloud-link" id="grix-cloud-auth-toggle" type="button">Create an account</button></div>',
-    '  </form>',
-    '</div>',
+    '<section class="grix-cloud-welcome" id="grix-cloud-welcome">',
+    '  <div class="grix-cloud-welcome-copy">',
+    '    <div class="grix-cloud-eyebrow">YOUR PRIVATE ANDROID WORKSPACE</div>',
+    '    <h1>Android, ready for your next idea.</h1>',
+    '    <p class="grix-cloud-lead">A focused space to access your Android devices, manage builds, and continue your work from one place.</p>',
+    '    <div class="grix-cloud-auth" id="grix-cloud-auth">',
+    '      <button class="grix-cloud-google" id="grix-cloud-google" type="button"><span class="grix-cloud-google-mark" aria-hidden="true">G</span><span>Continue with Google</span><span class="grix-cloud-google-arrow" aria-hidden="true">→</span></button>',
+    '      <p class="grix-cloud-auth-caption">Secure sign-in with your Google account.</p>',
+    '    </div>',
+    '    <div class="grix-cloud-trust-row"><span>PRIVATE BY DEFAULT</span><i></i><span>ONE-STEP SIGN IN</span></div>',
+    '  </div>',
+    '  <aside class="grix-cloud-product-preview" aria-label="GRIXDroid workspace preview">',
+    '    <div class="grix-cloud-preview-window">',
+    '      <div class="grix-cloud-preview-top"><div class="grix-cloud-preview-brand"><span>G</span><strong>GRIXDROID</strong></div><span class="grix-cloud-preview-private">PRIVATE WORKSPACE</span></div>',
+    '      <div class="grix-cloud-preview-body">',
+    '        <nav class="grix-cloud-preview-nav" aria-label="Workspace sections"><span class="active"><i>▦</i>Overview</span><span><i>▣</i>Devices</span><span><i>↥</i>App builds</span><span><i>⌘</i>Sessions</span></nav>',
+    '        <div class="grix-cloud-preview-content">',
+    '          <div class="grix-cloud-preview-heading"><small>WORKSPACE</small><strong>Your Android toolkit.</strong><span>Everything in one place.</span></div>',
+    '          <div class="grix-cloud-preview-grid">',
+    '            <article><span class="grix-cloud-preview-icon lavender">▣</span><strong>Devices</strong><small>Manage Android environments</small></article>',
+    '            <article><span class="grix-cloud-preview-icon blue">↥</span><strong>App builds</strong><small>Keep your builds organized</small></article>',
+    '            <article><span class="grix-cloud-preview-icon green">⌘</span><strong>Sessions</strong><small>Return to your workspace</small></article>',
+    '          </div>',
+    '          <div class="grix-cloud-preview-footer"><span class="grix-cloud-preview-dot"></span><span>Your workspace is ready when you are.</span></div>',
+    '        </div>',
+    '      </div>',
+    '    </div>',
+    '    <div class="grix-cloud-preview-caption">A simpler way to work with Android.</div>',
+    '  </aside>',
+    '</section>',
     '<div class="grix-cloud-dashboard" id="grix-cloud-dashboard" hidden>',
     '  <div class="grix-cloud-toolbar"><span id="grix-cloud-account"></span><div><button class="grix-cloud-secondary" id="grix-cloud-refresh" type="button">Refresh</button><button class="grix-cloud-secondary" id="grix-cloud-signout" type="button">Sign out</button></div></div>',
     '  <div class="grix-cloud-section-heading"><div><h3>Cloud devices</h3><p>Devices are owned by your account.</p></div></div>',
     '  <div class="grix-cloud-device-list" id="grix-cloud-device-list"><div class="grix-cloud-empty">No cloud devices yet.</div></div>',
-    '  <div class="grix-cloud-request-box"><div><h3>Request an Android device</h3><p>This submits a provisioning request. It does not start an emulator by itself.</p></div>',
+    '  <div class="grix-cloud-request-box"><div><h3>Request an Android device</h3><p>Add a device to your workspace with a profile that fits your needs.</p></div>',
     '    <form id="grix-cloud-request-form" class="grix-cloud-request-form">',
     '      <label>Device name<input id="grix-cloud-device-name" type="text" required minlength="2" maxlength="40" placeholder="My Android"></label>',
     '      <label>Device profile<select id="grix-cloud-profile"><option value="compact">Compact · lower resource profile</option><option value="standard" selected>Standard · balanced profile</option></select></label>',
@@ -140,7 +159,6 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '    </div>',
     '  </div>',
     '</div>',
-    '<div class="grix-cloud-footnote">Live Android screens require an online Android worker and WebRTC stream. Queued device requests are not running emulators.</div>',
   ].join('');
 
   const header = app.querySelector('.header');
@@ -157,9 +175,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   const status = get<HTMLElement>('#grix-cloud-status');
   const authPanel = get<HTMLElement>('#grix-cloud-auth');
   const dashboard = get<HTMLElement>('#grix-cloud-dashboard');
-  const authForm = get<HTMLFormElement>('#grix-cloud-auth-form');
-  const authSubmit = get<HTMLButtonElement>('#grix-cloud-auth-submit');
-  const authToggle = get<HTMLButtonElement>('#grix-cloud-auth-toggle');
+  const welcome = get<HTMLElement>('#grix-cloud-welcome');
   const googleButton = get<HTMLButtonElement>('#grix-cloud-google');
   const requestForm = get<HTMLFormElement>('#grix-cloud-request-form');
   const requestSubmit = get<HTMLButtonElement>('#grix-cloud-request-submit');
@@ -183,7 +199,6 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   let nightModeEnabled = false;
   const fontScales = [1, 1.15, 1.3];
   let fontScaleIndex = 0;
-  let authMode: 'signin' | 'signup' = 'signin';
   let authSession: AuthSession | null = null;
   let busy = false;
 
@@ -194,9 +209,10 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   }
 
   function setSignedIn(email: string | undefined): void {
+    welcome.hidden = Boolean(authSession);
     authPanel.hidden = Boolean(authSession);
     dashboard.hidden = !authSession;
-    status.textContent = authSession ? 'ACCOUNT CONNECTED' : configured ? 'SIGN IN REQUIRED' : 'TEMPORARILY UNAVAILABLE';
+    status.textContent = authSession ? 'ACCOUNT CONNECTED' : configured ? 'SIGN IN REQUIRED' : 'SIGN-IN UNAVAILABLE';
     status.classList.toggle('connected', Boolean(authSession));
     const accountEmail = email || authSession?.email;
     accountLabel.textContent = accountEmail ? 'Signed in as ' + accountEmail : 'Signed in';
@@ -751,57 +767,10 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     googleButton.hidden = true;
     setSignedIn(undefined);
     setNotice('Sign-in is temporarily unavailable. Please try again later.', 'info');
-    authForm.hidden = true;
     return;
   }
 
   googleButton.addEventListener('click', () => { void beginGoogleSignIn(); });
-
-  authForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (busy) return;
-    const email = get<HTMLInputElement>('#grix-cloud-email').value.trim();
-    const password = get<HTMLInputElement>('#grix-cloud-password').value;
-    if (password.length < 8) return setNotice('Use a password with at least 8 characters.', 'error');
-    busy = true;
-    authSubmit.disabled = true;
-    setNotice(authMode === 'signup' ? 'Creating your account…' : 'Signing in…');
-    try {
-      const endpoint = authMode === 'signup' ? '/signup' : '/token?grant_type=password';
-      const payload = await authRequest(endpoint, { email, password });
-      if (!acceptSession(payload)) {
-        if (authMode === 'signup') {
-          setNotice('Account created. Check your email for a confirmation link, then sign in.', 'success');
-          authMode = 'signin';
-          authSubmit.textContent = 'Sign in';
-          authToggle.textContent = 'Create an account';
-        } else {
-          throw new Error(payload.error_description || payload.msg || 'Sign-in did not return a session.');
-        }
-      } else {
-        setSignedIn(payload.user?.email || email);
-        setNotice('Account connected. Loading your devices…', 'success');
-        await reload();
-        setNotice('Your private device workspace is ready. Device provisioning will remain queued until an Android worker is connected.', 'success');
-      }
-    } catch (error) {
-      authSession = null;
-      try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch { /* Ignore unavailable storage. */ }
-      setSignedIn(undefined);
-      setNotice(userFacingError(error, 'Unable to authenticate.'), 'error');
-    } finally {
-      busy = false;
-      authSubmit.disabled = false;
-    }
-  });
-
-  authToggle.addEventListener('click', () => {
-    authMode = authMode === 'signin' ? 'signup' : 'signin';
-    authSubmit.textContent = authMode === 'signup' ? 'Create account' : 'Sign in';
-    authToggle.textContent = authMode === 'signup' ? 'I already have an account' : 'Create an account';
-    get<HTMLInputElement>('#grix-cloud-password').autocomplete = authMode === 'signup' ? 'new-password' : 'current-password';
-    setNotice(authMode === 'signup' ? 'Create an account with email and password. Email confirmation may be required.' : 'Sign in to view your private cloud workspace.');
-  });
 
   requestForm.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -821,7 +790,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       });
       nameInput.value = '';
       await reload();
-      setNotice('Request saved to your account. It will remain queued until a compatible Android worker accepts it.', 'success');
+      setNotice('Your device request has been saved to your workspace.', 'success');
     } catch (error) {
       setNotice(userFacingError(error, 'Unable to submit the provisioning request.'), 'error');
     } finally {
