@@ -1229,3 +1229,117 @@ body::before { display: none; }
   .grix-cloud-product-preview { animation: none; }
   .grix-cloud-google { transition: none; }
 }
+
+
+/* Focused Google-only sign-in screen */
+.grix-cloud-welcome {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  min-height: min(70vh, 680px);
+  padding: clamp(2rem, 6vw, 4.5rem) 1rem;
+}
+.grix-cloud-welcome-inner {
+  width: min(100%, 570px);
+  padding: clamp(1.5rem, 4vw, 3.1rem);
+  border: 1px solid #e8ecf2;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 16px 46px rgba(23, 32, 51, .055);
+}
+.grix-cloud-welcome-copy {
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  text-align: center;
+}
+.grix-cloud-welcome .grix-cloud-eyebrow {
+  margin: 0 0 1rem;
+  color: #6b58cc;
+  font: 800 .64rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .15em;
+}
+.grix-cloud-welcome h1 {
+  max-width: 500px;
+  margin: 0 auto;
+  color: #172033;
+  font-size: clamp(2.05rem, 5vw, 3.15rem);
+  font-weight: 850;
+  line-height: 1.08;
+  letter-spacing: -.055em;
+}
+.grix-cloud-welcome .grix-cloud-lead {
+  max-width: 410px;
+  margin: 1rem auto 1.8rem;
+  color: #758195;
+  font-size: clamp(.92rem, 1.6vw, 1.02rem);
+  line-height: 1.7;
+}
+.grix-cloud-welcome .grix-cloud-auth {
+  width: min(100%, 390px);
+  margin: 0 auto;
+}
+.grix-cloud-welcome .grix-cloud-google {
+  justify-content: center;
+  min-height: 58px;
+  gap: .75rem;
+  padding: .85rem 1rem;
+  border: 1px solid #dce2eb;
+  border-radius: 11px;
+  background: #fff;
+  color: #202b3d;
+  box-shadow: 0 5px 16px rgba(27, 40, 63, .045);
+  font-size: .9rem;
+  font-weight: 750;
+}
+.grix-cloud-welcome .grix-cloud-google:hover:not(:disabled) {
+  border-color: #c3ccda;
+  background: #fbfcfe;
+  box-shadow: 0 9px 22px rgba(27, 40, 63, .08);
+  transform: translateY(-1px);
+}
+.grix-cloud-welcome .grix-cloud-google-mark {
+  width: 25px;
+  height: 25px;
+  border: 0;
+  background: linear-gradient(135deg, #4285f4 15%, #34a853 42%, #fbbc05 66%, #ea4335 88%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 1.35rem;
+}
+.grix-cloud-welcome .grix-cloud-auth-caption {
+  margin: .8rem 0 0;
+  color: #929cac;
+  font-size: .74rem;
+  text-align: center;
+}
+.grix-cloud-welcome .grix-cloud-trust-row {
+  justify-content: center;
+  margin-top: 1.65rem;
+  color: #98a1af;
+}
+.grix-cloud-welcome .grix-cloud-trust-row i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #c1c8d2;
+}
+@media (max-width: 520px) {
+  .grix-cloud-welcome {
+    min-height: 65vh;
+    padding: 2rem .15rem;
+  }
+  .grix-cloud-welcome-inner {
+    padding: 1.65rem 1.15rem 1.8rem;
+    border-radius: 17px;
+  }
+  .grix-cloud-welcome h1 {
+    font-size: clamp(2rem, 10vw, 2.55rem);
+  }
+  .grix-cloud-welcome .grix-cloud-trust-row {
+    flex-wrap: wrap;
+    gap: .5rem;
+    font-size: .5rem;
+  }
+}
