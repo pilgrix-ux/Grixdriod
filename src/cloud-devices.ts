@@ -46,8 +46,25 @@ type CloudDeviceAction = {
   failure_reason: string | null;
 };
 
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+const DEFAULT_SUPABASE_URL = 'https://olbqxgnhozafcckcoapx.supabase.co';
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_2SBpc33fTryZKwaSc6pl2w_yDZBJ22U';
+
+function normalizeSupabaseUrl(value: string): string | null {
+  const cleaned = value.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '');
+  if (!cleaned || /your[_-]?project[_-]?ref|example\.com/i.test(cleaned)) return null;
+  const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(cleaned) ? cleaned : 'https://' + cleaned;
+  try {
+    const parsed = new URL(candidate);
+    if (!parsed.hostname || (parsed.protocol !== 'https:' && parsed.protocol !== 'http:')) return null;
+    if (parsed.protocol === 'http:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+const SUPABASE_URL = normalizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL || '') || DEFAULT_SUPABASE_URL;
+const SUPABASE_KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim() || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 const WHEP_BASE_URL = (import.meta.env.VITE_GRIXDROID_WHEP_BASE_URL || '').replace(/\/+$/, '');
 const configured = Boolean(SUPABASE_URL && SUPABASE_KEY);
 const authBase = SUPABASE_URL + '/auth/v1';
@@ -610,8 +627,10 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       clearOAuthVerifier();
       googleButton.disabled = false;
       googleButton.innerHTML = '<span class="grix-cloud-google-mark" aria-hidden="true">G</span><span>Continue with Google</span>';
-      const detail = error instanceof Error && error.message ? error.message : 'Unknown browser error';
-      setNotice('Google sign-in stopped while ' + stage + ': ' + detail, 'error');
+      if (import.meta.env.DEV) {
+        console.error('[GRIXDroid] Google sign-in startup failed during ' + stage, error);
+      }
+      setNotice('Google sign-in is temporarily unavailable. Please try again.', 'error');
     }
   }
 
