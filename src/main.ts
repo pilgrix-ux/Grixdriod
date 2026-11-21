@@ -1,4 +1,5 @@
 import { mountCloudDevicesPanel } from './cloud-devices';
+import { mountWorkspaceExperience } from './workspace-experience';
 
 const app = document.querySelector<HTMLElement>('#app');
 
@@ -7,3 +8,4 @@ if (!app) {
 }
 
 mountCloudDevicesPanel(app);
+mountWorkspaceExperience();
