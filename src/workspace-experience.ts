@@ -235,7 +235,17 @@ export function mountWorkspaceExperience(): void {
     if (brandHeader) brandHeader.hidden = !dashboard.hidden;
   };
   syncBrandVisibility();
-  new MutationObserver(syncBrandVisibility).observe(dashboard, { attributes: true, attributeFilter: ['hidden'] });
+  new MutationObserver(() => {
+    syncBrandVisibility();
+    if (!dashboard.hidden) {
+      if (activePage === 'apps') {
+        void loadApps();
+        void loadReadyDevices();
+      } else if (activePage === 'sessions') {
+        void loadSessions();
+      }
+    }
+  }).observe(dashboard, { attributes: true, attributeFilter: ['hidden'] });
 
   const pageTitle = shell.querySelector<HTMLElement>('#grix-workspace-page-title');
   const pages = [...shell.querySelectorAll<HTMLElement>('[data-page-panel]')];
@@ -251,6 +261,7 @@ export function mountWorkspaceExperience(): void {
   const sessionFeedback = shell.querySelector<HTMLElement>('#grix-session-feedback')!;
   const fileInput = shell.querySelector<HTMLInputElement>('#grix-app-file-input')!;
 
+  let activePage = 'apps';
   let apps: AppEntry[] = [];
   let groups: string[] = [];
   let assignments: Record<string, string> = {};
@@ -571,6 +582,7 @@ export function mountWorkspaceExperience(): void {
   }
 
   function switchPage(page: string): void {
+    activePage = page;
     for (const item of navButtons) {
       const selected = item.dataset.page === page;
       item.classList.toggle('active', selected);
@@ -579,10 +591,10 @@ export function mountWorkspaceExperience(): void {
     for (const panel of pages) panel.hidden = panel.dataset.pagePanel !== page;
     const titles: Record<string, string> = { apps: 'Apps', sandbox: 'Device Sandbox', sessions: 'Session History' };
     if (pageTitle) pageTitle.textContent = titles[page] || 'Workspace';
-    if (page === 'apps') {
+    if (!dashboard.hidden && page === 'apps') {
       void loadApps();
       void loadReadyDevices();
-    } else if (page === 'sessions') {
+    } else if (!dashboard.hidden && page === 'sessions') {
       void loadSessions();
     }
   }
