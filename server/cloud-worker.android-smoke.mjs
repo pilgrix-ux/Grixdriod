@@ -66,6 +66,12 @@ async function main() {
   const port = Number(serialMatch[2]);
 
   const dataRoot = path.join(runnerTemp, 'grixdroid-worker-integration-data');
+  const avdConfigPath = path.join(avdHome, avdName + '.avd', 'config.ini');
+  const avdConfig = await run(process.execPath, ['-e', "const fs=require('node:fs'); const p=process.argv[1]; const s=fs.readFileSync(p,'utf8'); console.log(s.split(/\\r?\\n/).filter(x=>/^image\\.sysdir\\.1=/.test(x)).join('\\n') || 'image.sysdir.1 is missing')", avdConfigPath]);
+  console.log('[smoke] AVD home:', avdHome);
+  console.log('[smoke] AVD config:', avdConfigPath);
+  console.log('[smoke] AVD image:', String(avdConfig.stdout).trim());
+  console.log('[smoke] Worker image:', systemImage);
   const deviceDir = path.join(dataRoot, 'devices', REQUEST_ID);
   await mkdir(deviceDir, { recursive: true });
   await writeFile(path.join(deviceDir, 'device.json'), JSON.stringify({
