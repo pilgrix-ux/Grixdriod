@@ -9,6 +9,9 @@ on:
       - "server/cloud-worker.mjs"
       - "server/cloud-worker.android-smoke.mjs"
       - "server/cloud-worker.test.mjs"
+      - "server/worker-doctor.mjs"
+      - "server/worker-doctor.test.mjs"
+      - "package.json"
       - ".env.worker.example"
   pull_request:
     paths:
@@ -70,7 +73,7 @@ jobs:
         run: |
           node --check server/cloud-worker.mjs
           node --check server/cloud-worker.android-smoke.mjs
-          node --test server/cloud-worker.test.mjs
+          node --test server/cloud-worker.test.mjs server/worker-doctor.test.mjs
 
       - name: Boot Android and smoke-test system services
         uses: reactivecircus/android-emulator-runner@v2
