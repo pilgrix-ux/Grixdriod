@@ -29,10 +29,10 @@ Install the Android SDK command-line tools, then accept the SDK licences and ins
 
 ```bash
 sdkmanager --licenses
-sdkmanager "platform-tools" "emulator" "cmdline-tools;latest" "system-images;android-35;google_apis;x86_64"
+sdkmanager "platform-tools" "emulator" "cmdline-tools;latest" "system-images;android-35;default;x86_64"
 ```
 
-The default worker example currently selects the Google Play-enabled image. Google Play and Google Play services are proprietary components; do not redistribute them or assume an open-source licence. For a fully open-source baseline, use the `google_apis` AOSP-compatible SDK image shown above and set `GRIXDROID_SYSTEM_IMAGE=system-images;android-35;google_apis;x86_64`. Features that require Google Play must be tested separately with an appropriately licensed image or a physical device.
+The default worker example currently selects the Google Play-enabled image. Google Play and Google Play services are proprietary components; do not redistribute them or assume an open-source licence. For a fully open-source baseline, use the `google_apis` AOSP-compatible SDK image shown above and set `GRIXDROID_SYSTEM_IMAGE=system-images;android-35;default;x86_64`. Features that require Google Play must be tested separately with an appropriately licensed image or a physical device.
 
 Make sure the worker user can access `/dev/kvm` and that `GRIXDROID_DATA_ROOT` points to a durable mounted disk, not a temporary directory or container layer. Keep one concurrent device initially and monitor disk growth.
 
