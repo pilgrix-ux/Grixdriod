@@ -46,6 +46,17 @@ export function validateAction(body) {
     if (!Number.isFinite(scale) || scale < 0.85 || scale > 1.3) throw new Error('Font scale must be between 0.85 and 1.3.');
     return { type: 'font_scale', scale };
   }
+  if (body.type === 'resolution') {
+    const presets = {
+      '180p': { width: 180, height: 400 },
+      '360p': { width: 360, height: 800 },
+      '480p': { width: 480, height: 1067 },
+      '720p': { width: 720, height: 1600 },
+    };
+    const preset = String(body.preset || '');
+    if (!Object.hasOwn(presets, preset)) throw new Error('Supported display quality presets are 180p, 360p, 480p and 720p.');
+    return { type: 'resolution', preset, ...presets[preset] };
+  }
   if (body.type === 'fingerprint') return { type: 'fingerprint' };
   if (body.type === 'install_apk') {
     const objectPath = String(body.object_path || '');
@@ -647,6 +658,9 @@ async function executeAction(config, meta, action, context = {}) {
     await adb(config, meta.serial, ['shell', 'cmd', 'uimode', 'night', normalized.enabled ? 'yes' : 'no']);
   } else if (normalized.type === 'font_scale') {
     await adb(config, meta.serial, ['shell', 'settings', 'put', 'system', 'font_scale', String(normalized.scale)]);
+  } else if (normalized.type === 'resolution') {
+    await adb(config, meta.serial, ['shell', 'wm', 'size', normalized.width + 'x' + normalized.height]);
+    meta.resolution = { width: normalized.width, height: normalized.height };
   } else if (normalized.type === 'fingerprint') {
     await run(config.adb, ['-s', meta.serial, 'emu', 'finger', 'touch', '1']);
   } else if (normalized.type === 'install_apk') {
