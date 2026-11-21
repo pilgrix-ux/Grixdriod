@@ -235,17 +235,7 @@ export function mountWorkspaceExperience(): void {
     if (brandHeader) brandHeader.hidden = !dashboard.hidden;
   };
   syncBrandVisibility();
-  new MutationObserver(() => {
-    syncBrandVisibility();
-    if (!dashboard.hidden) {
-      if (activePage === 'apps') {
-        void loadApps();
-        void loadReadyDevices();
-      } else if (activePage === 'sessions') {
-        void loadSessions();
-      }
-    }
-  }).observe(dashboard, { attributes: true, attributeFilter: ['hidden'] });
+  new MutationObserver(syncBrandVisibility).observe(dashboard, { attributes: true, attributeFilter: ['hidden'] });
 
   const pageTitle = shell.querySelector<HTMLElement>('#grix-workspace-page-title');
   const pages = [...shell.querySelectorAll<HTMLElement>('[data-page-panel]')];
@@ -598,6 +588,15 @@ export function mountWorkspaceExperience(): void {
       void loadSessions();
     }
   }
+
+  window.addEventListener('grixdroid:workspace-ready', () => {
+    if (activePage === 'apps') {
+      void loadApps();
+      void loadReadyDevices();
+    } else if (activePage === 'sessions') {
+      void loadSessions();
+    }
+  });
 
   navButtons.forEach((button) => button.addEventListener('click', () => switchPage(button.dataset.page || 'apps')));
   shell.querySelector<HTMLButtonElement>('#grix-app-upload')?.addEventListener('click', () => fileInput.click());
