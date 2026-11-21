@@ -25,6 +25,17 @@ test('accepts only the Android navigation and power key allowlist', () => {
   assert.throws(() => validateAction({ type: 'key', key: 'SHELL' }), /Supported keys/);
 });
 
+test('allows the supported Android display quality presets and rejects unsupported ones', () => {
+  assert.deepEqual(validateAction({ type: 'resolution', preset: '720p' }), {
+    type: 'resolution', preset: '720p', width: 720, height: 1600,
+  });
+  assert.deepEqual(validateAction({ type: 'resolution', preset: '180p' }), {
+    type: 'resolution', preset: '180p', width: 180, height: 400,
+  });
+  assert.throws(() => validateAction({ type: 'resolution', preset: '1080p' }), /Supported display quality presets/);
+  assert.throws(() => validateAction({ type: 'resolution', preset: 'ultra' }), /Supported display quality presets/);
+});
+
 test('validates Android rotation, dark mode and font-size controls', () => {
   assert.deepEqual(validateAction({ type: 'rotate', orientation: 'landscape' }), { type: 'rotate', orientation: 'landscape' });
   assert.throws(() => validateAction({ type: 'rotate', orientation: 'upside-down' }), /portrait or landscape/);
