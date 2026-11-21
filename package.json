@@ -11,7 +11,8 @@
     "device-bridge": "node server/adb-bridge.mjs",
     "device-worker": "node --env-file=.env.worker server/cloud-worker.mjs",
     "test:worker": "node --test server/*.test.mjs",
-    "mediamtx-auth": "node --env-file=.env.mediamtx-auth server/mediamtx-auth.mjs"
+    "mediamtx-auth": "node --env-file=.env.mediamtx-auth server/mediamtx-auth.mjs",
+    "device-worker:doctor": "node --env-file=.env.worker server/worker-doctor.mjs"
   },
   "devDependencies": {
     "typescript": "~5.9.3",
