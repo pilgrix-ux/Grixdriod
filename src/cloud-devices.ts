@@ -138,6 +138,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '      <section class="grix-appetize-settings" id="grix-cloud-session-settings">',
     '        <div class="grix-appetize-setting-row"><div><strong>Show Device Controls</strong><small>Power, navigation, rotation and device tools</small></div><div class="grix-appetize-show-hide"><button id="grix-cloud-controls-show" class="selected" type="button">Show</button><button id="grix-cloud-controls-hide" type="button">Hide</button></div></div>',
     '        <div class="grix-appetize-setting-row"><div><strong>Show Developer Tools</strong><small>Android version, screen, storage and stream details</small></div><div class="grix-appetize-show-hide"><button id="grix-cloud-devtools-show" type="button">Show</button><button id="grix-cloud-devtools-hide" class="selected" type="button">Hide</button></div></div>',
+    '        <div class="grix-appetize-setting-row grix-appetize-resolution-row"><div><strong>Display quality</strong><small>720p is included in Free</small></div><select id="grix-cloud-resolution" aria-label="Android display quality"><option value="180p">180p · Data saver</option><option value="360p">360p · Low</option><option value="480p">480p · Standard</option><option value="720p" selected>720p · Free</option><option value="1080p" disabled>1080p · Paid plan (coming soon)</option></select></div>',
     '      </section>',
     '      <section class="grix-appetize-device-area">',
     '        <div class="grix-appetize-app-title"><span class="grix-appetize-app-checkbox"></span><strong id="grix-cloud-viewer-title">Android device preview</strong><span class="grix-appetize-app-version">v1.0</span></div>',
@@ -915,6 +916,16 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   get<HTMLButtonElement>('#grix-cloud-controls-hide').addEventListener('click', () => setShowHide('grix-cloud-controls-show', 'grix-cloud-controls-hide', 'grix-cloud-device-controls', false));
   get<HTMLButtonElement>('#grix-cloud-devtools-show').addEventListener('click', () => setShowHide('grix-cloud-devtools-show', 'grix-cloud-devtools-hide', 'grix-cloud-devtools', true));
   get<HTMLButtonElement>('#grix-cloud-devtools-hide').addEventListener('click', () => setShowHide('grix-cloud-devtools-show', 'grix-cloud-devtools-hide', 'grix-cloud-devtools', false));
+  const resolutionSelect = get<HTMLSelectElement>('#grix-cloud-resolution');
+  resolutionSelect.addEventListener('change', () => {
+    const preset = resolutionSelect.value;
+    void sendViewerCommand({ type: 'resolution', preset }).then(() => {
+      viewerInputStatus.textContent = 'Android display quality changed to ' + preset + '.';
+    }).catch((error) => {
+      resolutionSelect.value = '720p';
+      viewerInputStatus.textContent = userFacingError(error, 'Display quality could not be changed.');
+    });
+  });
   get<HTMLButtonElement>('#grix-cloud-viewer-menu').addEventListener('click', () => {
     const settings = get<HTMLElement>('#grix-cloud-session-settings');
     settings.hidden = !settings.hidden;
