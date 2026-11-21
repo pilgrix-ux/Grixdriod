@@ -78,6 +78,10 @@ Run it from **Actions → Android Emulator Smoke (Free macOS) → Run workflow**
 
 This is an automated CI test, **not** an always-on cloud phone or a public streaming service. Standard GitHub-hosted runners are free for public repositories; see [GitHub Actions billing](https://docs.github.com/en/actions/concepts/billing-and-usage). The distinction between the temporary test emulator, private ADB bridge and a future persistent device host is documented in [the free-first Android plan](docs/FREE_FIRST_ANDROID_PLAN.md).
 
+## Android runtime provider strategy
+
+GRIXDroid will use the official Android Emulator as its first cloud-device provider for ordinary APK install, launch and compatibility testing. Cuttlefish is planned as a separate optional provider for AOSP and custom system-image engineering; it is not a drop-in AVD replacement and is not yet implemented or hosted. The browser Rust/WASM ARM Lab remains a separate research feature. See [Android runtime foundation](docs/ANDROID_RUNTIME_FOUNDATION.md) for the provider architecture, Cuttlefish prerequisites, free-first plan and current deployment boundaries.
+
 ## Run locally
 
 Requirements: Rust stable, the wasm32-unknown-unknown target, wasm-pack, and Node.js 20 or newer.
