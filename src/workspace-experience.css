@@ -1,0 +1,287 @@
+/* Grixdriod workspace — original, lightweight app-management interface */
+#app { padding: 0; }
+.grix-cloud-panel {
+  width: 100%; max-width: none; margin: 0; padding: 0; border: 0; border-radius: 0;
+  background: #f7f8fa; color: #182235; box-shadow: none;
+}
+.grix-cloud-panel [hidden] { display: none !important; }
+.grix-cloud-heading {
+  width: min(100% - 2.5rem, 1120px); margin: 1.5rem auto 0; padding: 0 0 1rem;
+  border-bottom: 1px solid #e9edf2;
+}
+.grix-cloud-notice {
+  width: min(100% - 2.5rem, 1120px); margin: 1rem auto 0; padding: .8rem 1rem;
+  border: 1px solid #e3e8ef; border-radius: 10px; background: #fff;
+  color: #475569; font-size: .82rem;
+}
+.grix-cloud-welcome { min-height: calc(100vh - 96px); padding: 2rem 1rem; background: #f7f8fa; }
+.grix-cloud-welcome-inner {
+  width: min(100%, 560px); padding: clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid #e7ebf1; border-radius: 20px; background: #fff;
+  box-shadow: 0 18px 48px rgba(22, 35, 57, .055);
+}
+.grix-cloud-welcome h1 { color: #182235; letter-spacing: -.045em; }
+.grix-cloud-welcome .grix-cloud-eyebrow { color: #6556bf; }
+.grix-cloud-lead { color: #6d788a; }
+.grix-cloud-google { border-radius: 10px; box-shadow: none; }
+.grix-cloud-trust-row { color: #8c95a4; }
+.grix-cloud-dashboard { display: block; width: 100%; padding: 0; }
+.grix-cloud-toolbar { display: none !important; }
+
+.grix-workspace-shell {
+  display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: 100vh;
+  background: #f7f8fa; color: #182235;
+}
+.grix-workspace-sidebar {
+  position: sticky; top: 0; display: flex; flex-direction: column; gap: 1.7rem;
+  height: 100vh; min-height: 560px; padding: 1.55rem 1.1rem 1.1rem;
+  background: #161c2a; color: #e9edf5;
+}
+.grix-workspace-side-brand { display: flex; align-items: center; gap: .75rem; padding: 0 .25rem; }
+.grix-workspace-mark {
+  display: grid; width: 38px; height: 38px; place-items: center; border-radius: 11px;
+  background: #f7f8fb; color: #161c2a; font-size: 1.2rem; font-weight: 900;
+}
+.grix-workspace-side-brand > span:last-child { display: grid; gap: .15rem; }
+.grix-workspace-side-brand strong { color: #fff; font-size: 1rem; letter-spacing: -.025em; }
+.grix-workspace-side-brand small { color: #8893a7; font-size: .57rem; font-weight: 750; letter-spacing: .13em; }
+.grix-workspace-side-label { padding: 0 .55rem; color: #748097; font-size: .6rem; font-weight: 800; letter-spacing: .14em; }
+.grix-workspace-nav { display: grid; gap: .35rem; }
+.grix-workspace-nav-item {
+  display: flex; align-items: center; gap: .8rem; width: 100%; min-height: 44px;
+  padding: .65rem .75rem; border: 1px solid transparent; border-radius: 9px;
+  background: transparent; color: #adb6c6; text-align: left; font-size: .82rem; font-weight: 650;
+  cursor: pointer; transition: background .15s ease, color .15s ease;
+}
+.grix-workspace-nav-item:hover { background: #202a3b; color: #fff; }
+.grix-workspace-nav-item.active { border-color: rgba(157, 145, 255, .15); background: #293349; color: #fff; }
+.grix-workspace-nav-icon { display: grid; width: 20px; place-items: center; color: #aab3c4; font-size: 1.1rem; }
+.grix-workspace-nav-item.active .grix-workspace-nav-icon { color: #b7afff; }
+.grix-workspace-side-note {
+  display: flex; align-items: center; gap: .55rem; margin-top: auto; padding: .8rem .65rem;
+  border-top: 1px solid #2c3546; color: #8792a6; font-size: .68rem;
+}
+.grix-workspace-side-dot { width: 7px; height: 7px; border-radius: 50%; background: #56c69c; box-shadow: 0 0 0 3px rgba(86,198,156,.12); }
+
+.grix-workspace-main { min-width: 0; }
+.grix-workspace-topbar {
+  position: sticky; z-index: 5; top: 0; display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; min-height: 84px; padding: 1rem clamp(1.25rem, 3.2vw, 3rem);
+  border-bottom: 1px solid #e9edf2; background: rgba(255,255,255,.94); backdrop-filter: blur(12px);
+}
+.grix-workspace-breadcrumb { display: block; margin-bottom: .3rem; color: #929bab; font-size: .56rem; font-weight: 800; letter-spacing: .14em; }
+.grix-workspace-breadcrumb i { padding: 0 .25rem; color: #c4cad4; font-style: normal; }
+.grix-workspace-topbar h1 { margin: 0; color: #182235; font-size: 1.12rem; font-weight: 760; letter-spacing: -.025em; }
+.grix-workspace-account { display: flex; align-items: center; gap: .7rem; min-width: 0; }
+.grix-workspace-account #grix-cloud-account {
+  max-width: min(32vw, 270px); overflow: hidden; color: #778295; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap;
+}
+.grix-workspace-account #grix-cloud-signout {
+  min-height: 34px; margin: 0; padding: .45rem .7rem; border: 1px solid #e1e6ee;
+  border-radius: 8px; background: #fff; color: #465267; font-size: .7rem; cursor: pointer;
+}
+.grix-workspace-pages { width: min(100%, 1180px); margin: 0 auto; padding: clamp(1.25rem, 3vw, 2.4rem); }
+.grix-workspace-page[hidden] { display: none !important; }
+.grix-workspace-page-intro {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 1.2rem; margin-bottom: 1.6rem;
+}
+.grix-workspace-page-intro h2 { margin: 0; color: #192438; font-size: clamp(1.35rem, 2.5vw, 1.75rem); font-weight: 780; letter-spacing: -.045em; }
+.grix-workspace-page-intro p { margin: .45rem 0 0; color: #778295; font-size: .82rem; line-height: 1.55; }
+.grix-workspace-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; }
+.grix-workspace-button {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 39px; padding: .58rem .85rem;
+  border: 1px solid #dfe4ec; border-radius: 8px; font-size: .74rem; font-weight: 700; cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.grix-workspace-button:hover:not(:disabled) { transform: translateY(-1px); }
+.grix-workspace-button.primary { border-color: #242d40; background: #242d40; color: #fff; }
+.grix-workspace-button.primary:hover:not(:disabled) { background: #35425c; }
+.grix-workspace-button.secondary { background: #fff; color: #3e4b60; }
+.grix-workspace-button.secondary:hover:not(:disabled) { border-color: #bfc8d6; background: #fbfcfe; }
+.grix-workspace-button.text { border-color: transparent; background: transparent; color: #68758a; }
+.grix-workspace-button:disabled { opacity: .45; cursor: not-allowed; }
+.grix-app-group-form {
+  margin: -.45rem 0 1.15rem; padding: .85rem; border: 1px solid #e5e9ef; border-radius: 10px; background: #fff;
+}
+#grix-app-group-create { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+#grix-app-group-create label { color: #536075; font-size: .72rem; font-weight: 700; }
+#grix-app-group-name {
+  width: min(100%, 250px); min-height: 38px; padding: .55rem .7rem; border: 1px solid #dce2ea;
+  border-radius: 7px; background: #fff; color: #172033; font-size: .77rem;
+}
+.grix-app-library-tools { display: flex; align-items: center; gap: .9rem; margin-bottom: 1rem; }
+.grix-app-search {
+  display: flex; align-items: center; gap: .55rem; flex: 1 1 320px; min-width: 0; max-width: 520px;
+  min-height: 42px; padding: 0 .8rem; border: 1px solid #e1e6ed; border-radius: 9px; background: #fff; color: #98a1af;
+}
+.grix-app-search > span { font-size: 1.35rem; line-height: 1; }
+.grix-app-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: #263247; font-size: .77rem; }
+.grix-app-search input::placeholder { color: #a0a9b7; }
+.grix-app-install-target { display: flex; align-items: center; gap: .55rem; color: #778295; font-size: .68rem; font-weight: 700; white-space: nowrap; }
+.grix-app-install-target select {
+  max-width: 235px; min-height: 40px; padding: .5rem .7rem; border: 1px solid #e1e6ed; border-radius: 8px;
+  background: #fff; color: #425067; font-size: .72rem;
+}
+.grix-app-group-filters { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: 1.2rem; }
+.grix-app-filter {
+  min-height: 31px; padding: .4rem .72rem; border: 1px solid #e6eaf0; border-radius: 999px;
+  background: #fff; color: #718096; font-size: .66rem; font-weight: 700; cursor: pointer;
+}
+.grix-app-filter.active { border-color: #c9c4f4; background: #f1f0ff; color: #51479e; }
+.grix-app-feedback, .grix-session-feedback {
+  margin: 0 0 1rem; padding: .7rem .85rem; border: 1px solid #e4e9ef; border-radius: 8px;
+  background: #fff; color: #66748a; font-size: .74rem; line-height: 1.5;
+}
+.grix-app-feedback[data-kind="success"] { border-color: #cfe9dc; background: #f5fbf7; color: #23754f; }
+.grix-app-feedback[data-kind="error"], .grix-session-feedback[data-kind="error"] { border-color: #f0d5d5; background: #fff8f8; color: #9d4545; }
+.grix-app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 255px), 1fr)); gap: .85rem; }
+.grix-app-card {
+  display: grid; gap: 1rem; min-width: 0; padding: 1rem;
+  border: 1px solid #e6eaf0; border-radius: 11px; background: #fff;
+  box-shadow: 0 3px 12px rgba(22,35,57,.025);
+}
+.grix-app-card-top { display: flex; align-items: center; gap: .8rem; min-width: 0; }
+.grix-app-icon {
+  display: grid; flex: 0 0 44px; width: 44px; height: 44px; place-items: center;
+  border: 1px solid #e9eaf5; border-radius: 11px; background: #f3f2fb; color: #6559ae; font-size: 1.05rem; font-weight: 850;
+}
+.grix-app-information { display: grid; gap: .3rem; min-width: 0; }
+.grix-app-name { overflow: hidden; color: #253147; font-size: .82rem; font-weight: 760; text-overflow: ellipsis; white-space: nowrap; }
+.grix-app-meta { color: #98a2b0; font-size: .66rem; }
+.grix-app-card-actions { display: flex; gap: .5rem; }
+.grix-app-card-group {
+  flex: 1; min-width: 0; min-height: 38px; padding: .45rem .6rem; border: 1px solid #e1e6ed;
+  border-radius: 8px; background: #fff; color: #677489; font-size: .68rem;
+}
+.grix-app-card-actions .grix-workspace-button { min-width: 84px; }
+.grix-workspace-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .45rem;
+  grid-column: 1 / -1; min-height: 245px; padding: 2rem 1.2rem; border: 1px dashed #dce2eb;
+  border-radius: 12px; background: rgba(255,255,255,.68); color: #8792a3; text-align: center; font-size: .75rem;
+}
+.grix-workspace-empty-icon { color: #a6a2d6; font-size: 1.75rem; line-height: 1; }
+.grix-workspace-empty strong { margin-top: .2rem; color: #445168; font-size: .86rem; }
+.grix-workspace-empty p { max-width: 320px; margin: .15rem 0 .55rem; color: #8b96a6; font-size: .73rem; line-height: 1.55; }
+.grix-workspace-footnote { margin: 1.15rem 0 0; color: #9aa3b0; font-size: .66rem; line-height: 1.55; }
+
+.grix-workspace-device-section, .grix-workspace-request-section, .grix-workspace-requests-section { margin-bottom: 1.25rem; }
+.grix-workspace-device-section > .grix-cloud-section-heading,
+.grix-workspace-requests-section > .grix-cloud-section-heading { margin: 0 0 .7rem; }
+.grix-workspace-device-section .grix-cloud-section-heading h3,
+.grix-workspace-requests-section .grix-cloud-section-heading h3 { color: #2b374c; font-size: .88rem; }
+.grix-workspace-device-section .grix-cloud-section-heading p,
+.grix-workspace-requests-section .grix-cloud-section-heading p { color: #8792a2; font-size: .7rem; }
+.grix-cloud-device-list, .grix-cloud-request-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: .75rem; }
+.grix-cloud-device-card, .grix-cloud-request-card {
+  min-width: 0; padding: .95rem; border: 1px solid #e5e9ef; border-radius: 10px;
+  background: #fff; box-shadow: 0 3px 12px rgba(22,35,57,.025);
+}
+.grix-cloud-card-top strong { color: #27344a; font-size: .82rem; }
+.grix-cloud-device-card p, .grix-cloud-request-card p { margin: .5rem 0 0; color: #8792a2; font-size: .68rem; line-height: 1.5; }
+.grix-cloud-device-card > p:nth-of-type(n+2) { display: none; }
+.grix-cloud-state { border-color: #e3e8ef; background: #f8f9fb; color: #7b8797; font-size: .57rem; }
+.grix-cloud-state-running, .grix-cloud-state-fulfilled { border-color: #d3eadf; background: #f2faf6; color: #23754f; }
+.grix-cloud-state-error, .grix-cloud-state-failed { border-color: #f1dada; background: #fff7f7; color: #a04444; }
+.grix-cloud-device-card .grix-cloud-secondary, .grix-cloud-request-card .grix-cloud-link { margin: .8rem 0 0; }
+.grix-cloud-request-box {
+  display: grid; grid-template-columns: minmax(170px,.8fr) minmax(0,1.2fr); align-items: center; gap: 1.1rem;
+  padding: 1.1rem; border: 1px solid #e5e9ef; border-radius: 11px; background: #fff;
+}
+.grix-cloud-request-box h3 { margin: 0; color: #263248; font-size: .9rem; }
+.grix-cloud-request-box p { color: #8792a2; font-size: .7rem; line-height: 1.5; }
+.grix-cloud-request-form { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: .65rem; }
+.grix-cloud-request-form label { display: grid; gap: .35rem; color: #677489; font-size: .67rem; font-weight: 700; }
+.grix-cloud-request-form input, .grix-cloud-request-form select {
+  min-width: 0; min-height: 39px; padding: .55rem .65rem; border: 1px solid #dfe5ed;
+  border-radius: 7px; background: #fff; color: #35445b; font-size: .72rem;
+}
+.grix-cloud-request-form button { min-height: 39px; white-space: nowrap; }
+.grix-cloud-empty { border-color: #e3e8ef; background: #fff; color: #8792a2; }
+
+.grix-session-list { display: grid; gap: .7rem; }
+.grix-session-card { padding: .9rem 1rem; border: 1px solid #e5e9ef; border-radius: 10px; background: #fff; }
+.grix-session-card-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.grix-session-card-head strong { color: #2a364b; font-size: .8rem; }
+.grix-session-state { padding: .3rem .55rem; border: 1px solid #e2e7ed; border-radius: 99px; background: #f8f9fb; color: #788598; font-size: .59rem; text-transform: capitalize; }
+.grix-session-state.state-connected { border-color: #d3eadf; background: #f2faf6; color: #23754f; }
+.grix-session-state.state-failed { border-color: #f0d8d8; background: #fff7f7; color: #a04444; }
+.grix-session-card-detail { display: flex; flex-wrap: wrap; gap: .5rem 1.4rem; margin-top: .6rem; color: #8b96a6; font-size: .68rem; }
+
+.grix-workspace-size-row { flex-direction: row !important; align-items: center !important; justify-content: space-between; gap: 1rem !important; }
+.grix-workspace-size-select {
+  min-width: 104px; min-height: 38px; padding: .45rem .7rem; border: 1px solid #dfe4eb; border-radius: 7px; background: #fff; color: #3c4960;
+}
+
+@media (max-width: 760px) {
+  .grix-workspace-shell { display: flex; flex-direction: column; min-height: 100vh; }
+  .grix-workspace-sidebar { position: sticky; top: 0; z-index: 10; height: auto; min-height: 0; padding: .75rem .85rem .65rem; gap: .7rem; }
+  .grix-workspace-side-brand { gap: .55rem; }
+  .grix-workspace-mark { width: 32px; height: 32px; border-radius: 9px; font-size: 1rem; }
+  .grix-workspace-side-brand strong { font-size: .88rem; }
+  .grix-workspace-side-brand small { font-size: .5rem; }
+  .grix-workspace-side-label, .grix-workspace-side-note { display: none; }
+  .grix-workspace-nav { display: flex; gap: .35rem; overflow-x: auto; padding-bottom: .05rem; scrollbar-width: none; }
+  .grix-workspace-nav::-webkit-scrollbar { display: none; }
+  .grix-workspace-nav-item { flex: 0 0 auto; width: auto; min-height: 38px; gap: .45rem; padding: .45rem .65rem; font-size: .68rem; white-space: nowrap; }
+  .grix-workspace-nav-icon { width: auto; font-size: .92rem; }
+  .grix-workspace-topbar { position: static; min-height: 65px; padding: .75rem 1rem; }
+  .grix-workspace-topbar h1 { font-size: 1rem; }
+  .grix-workspace-account #grix-cloud-account { display: none; }
+  .grix-workspace-pages { padding: 1.2rem .9rem 2rem; }
+  .grix-workspace-page-intro { align-items: flex-start; flex-direction: column; gap: .85rem; margin-bottom: 1.2rem; }
+  .grix-workspace-actions { width: 100%; }
+  .grix-workspace-actions .grix-workspace-button { flex: 1; }
+  .grix-app-library-tools { align-items: stretch; flex-direction: column; gap: .65rem; }
+  .grix-app-search { flex-basis: auto; max-width: none; }
+  .grix-app-install-target { justify-content: space-between; }
+  .grix-app-install-target select { flex: 1; max-width: none; }
+  .grix-app-grid { grid-template-columns: 1fr; }
+  .grix-cloud-request-box { grid-template-columns: 1fr; }
+  .grix-cloud-request-form { grid-template-columns: 1fr; }
+  .grix-cloud-request-form button { grid-column: auto; }
+  .grix-cloud-device-list, .grix-cloud-request-list { grid-template-columns: 1fr; }
+  .grix-session-card-head { align-items: flex-start; }
+}
+@media (max-width: 390px) {
+  .grix-workspace-topbar { padding: .65rem .75rem; }
+  .grix-workspace-pages { padding-inline: .7rem; }
+  .grix-workspace-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .grix-workspace-actions .grix-workspace-button { padding-inline: .45rem; font-size: .68rem; }
+  .grix-app-group-form { padding: .7rem; }
+  #grix-app-group-create { align-items: stretch; flex-direction: column; }
+  #grix-app-group-name { width: 100%; }
+}
+
+/* Keep the live Android view clear and uncluttered while retaining all working controls. */
+.grix-cloud-viewer { z-index: 10000; background: rgba(22,28,42,.86); backdrop-filter: blur(8px); }
+.grix-cloud-viewer-shell.grix-appetize-shell {
+  width: min(100%, 1180px); height: min(94vh, 960px); min-height: 0; max-height: 94vh;
+  margin: 3vh auto; overflow: auto; border: 1px solid #e0e5ec; border-radius: 14px;
+  background: #f8f9fb; box-shadow: 0 22px 70px rgba(0,0,0,.24);
+}
+.grix-appetize-header { min-height: 58px; padding: .7rem 1.1rem; background: #161c2a; }
+.grix-appetize-brand { font-size: .96rem; }
+.grix-appetize-brand-mark { width: 27px; height: 27px; border-radius: 8px; transform: none; }
+.grix-appetize-settings { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0 .8rem; padding: .2rem 1rem; background: #fff; border-bottom: 1px solid #e6eaf0; }
+.grix-appetize-setting-row { flex: 1 1 220px; flex-direction: row; align-items: center; justify-content: space-between; gap: .7rem; padding: .75rem .2rem; border-bottom: 0; }
+.grix-appetize-setting-row strong { color: #47546a; font-size: .72rem; }
+.grix-appetize-setting-row small { color: #929cac; font-size: .59rem; }
+.grix-appetize-show-hide button { min-width: 58px; min-height: 31px; font-size: .7rem; }
+.grix-appetize-device-area { padding: 1rem; background: #f4f6f9; }
+.grix-appetize-app-title { justify-content: flex-start; width: min(100%, 720px); margin-bottom: .75rem; font-size: .86rem; }
+.grix-appetize-app-checkbox { display: none; }
+.grix-appetize-device-stage { width: min(100%, 920px); gap: 1.3rem; }
+.grix-appetize-phone-frame { width: min(55vw, 410px); border-width: 10px; border-radius: 34px; }
+.grix-appetize-controls { position: static; }
+.grix-appetize-controls { background: #202b40; }
+.grix-appetize-input-area { margin-top: .9rem; }
+.grix-appetize-devtools { background: #fff; border-top-color: #e4e8ee; }
+@media (max-width: 760px) {
+  .grix-cloud-viewer-shell.grix-appetize-shell { width: 100%; height: 100%; max-height: none; min-height: 100%; margin: 0; border: 0; border-radius: 0; }
+  .grix-appetize-settings { display: grid; grid-template-columns: 1fr; padding-inline: .75rem; }
+  .grix-appetize-setting-row { padding: .55rem 0; }
+  .grix-appetize-device-stage { gap: .5rem; }
+  .grix-appetize-phone-frame { width: min(68vw, 300px); max-height: 65vh; }
+  .grix-appetize-controls { flex-basis: 50px; width: 50px; min-width: 50px; max-height: 60vh; }
+  .grix-appetize-control { flex-basis: 40px; width: 40px; min-height: 40px; }
+}
