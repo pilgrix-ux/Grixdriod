@@ -1,4 +1,4 @@
-name: Android Emulator Smoke (Free macOS)
+name: Android Emulator Smoke (Free Linux KVM)
 
 on:
   workflow_dispatch:
@@ -19,6 +19,9 @@ on:
       - "server/cloud-worker.mjs"
       - "server/cloud-worker.android-smoke.mjs"
       - "server/cloud-worker.test.mjs"
+      - "server/worker-doctor.mjs"
+      - "server/worker-doctor.test.mjs"
+      - "package.json"
       - ".env.worker.example"
 
 permissions:
@@ -30,9 +33,9 @@ concurrency:
 
 jobs:
   boot-real-android:
-    # Standard macOS runners are free for public repositories.
-    # macOS uses Apple's Hypervisor.framework, so this job does not need Linux KVM.
-    runs-on: macos-15-intel
+    # Standard Linux runners are free for public repositories.
+    # GitHub documents Android SDK hardware acceleration on hosted Linux runners.
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
 
     steps:
