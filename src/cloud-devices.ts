@@ -703,6 +703,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       setSignedIn(payload.user?.email || authSession?.email);
       setNotice('Google sign-in successful. Loading your workspace…', 'success');
       await reload();
+      window.dispatchEvent(new CustomEvent('grixdroid:workspace-ready'));
       setNotice('You are signed in with Google. Your private workspace is ready.', 'success');
     } catch {
       authSession = null;
@@ -834,6 +835,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
           try {
             await restRequest<unknown>('/cloud_device_requests?id=eq.' + encodeURIComponent(item.id) + '&status=eq.queued', { method: 'DELETE' });
             await reload();
+      window.dispatchEvent(new CustomEvent('grixdroid:workspace-ready'));
             setNotice('Provisioning request cancelled.', 'success');
           } catch (error) {
             setNotice(userFacingError(error, 'Unable to cancel request.'), 'error');
@@ -884,6 +886,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       });
       nameInput.value = '';
       await reload();
+      window.dispatchEvent(new CustomEvent('grixdroid:workspace-ready'));
       setNotice('Your device request has been saved to your workspace.', 'success');
     } catch (error) {
       setNotice(userFacingError(error, 'Unable to submit the provisioning request.'), 'error');
@@ -896,6 +899,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   get<HTMLButtonElement>('#grix-cloud-refresh').addEventListener('click', async () => {
     try {
       await reload();
+      window.dispatchEvent(new CustomEvent('grixdroid:workspace-ready'));
       setNotice('Device information refreshed.', 'success');
     } catch (error) {
       setNotice(userFacingError(error, 'Unable to refresh devices.'), 'error');
@@ -1110,6 +1114,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
         if (!(await refreshSession()) || !authSession) throw new Error('Session expired.');
       }
       await reload();
+      window.dispatchEvent(new CustomEvent('grixdroid:workspace-ready'));
       setNotice('Your private workspace is ready.', 'success');
     } catch {
       setNotice('Your session could not be restored. Please sign in again.', 'error');
