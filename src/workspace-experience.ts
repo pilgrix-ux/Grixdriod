@@ -182,7 +182,7 @@ export function mountWorkspaceExperience(): void {
     '      <div class="grix-app-feedback" id="grix-app-feedback" role="status" hidden></div>',
     '      <div class="grix-app-grid" id="grix-app-grid"><div class="grix-workspace-empty"><span class="grix-workspace-empty-icon">▧</span><strong>Your app library is empty</strong><p>Upload an APK to add your first Android app.</p></div></div>',
     '      <input id="grix-app-file-input" type="file" accept=".apk,application/vnd.android.package-archive" multiple hidden>',
-    '      <p class="grix-workspace-footnote">APK files are stored privately in your Grixdriod account. Maximum file size: 50 MB.</p>',
+    '      <p class="grix-workspace-footnote">APK files are private to your account. Groups are saved in this browser. Maximum APK size: 50 MB.</p>',
     '    </section>',
     '    <section class="grix-workspace-page" data-page-panel="sandbox" hidden>',
     '      <div class="grix-workspace-page-intro"><div><h2>Device Sandbox</h2><p>Request an Android device, then open its screen when it is ready.</p></div></div>',
@@ -201,7 +201,6 @@ export function mountWorkspaceExperience(): void {
     '</div>',
   ].join('');
 
-  const titlebar = shell.querySelector<HTMLElement>('.grix-workspace-topbar');
   const accountSlot = shell.querySelector<HTMLElement>('#grix-workspace-account');
   if (account && accountSlot) accountSlot.append(account);
   if (signOut && accountSlot) accountSlot.append(signOut);
@@ -252,7 +251,6 @@ export function mountWorkspaceExperience(): void {
   const sessionFeedback = shell.querySelector<HTMLElement>('#grix-session-feedback')!;
   const fileInput = shell.querySelector<HTMLInputElement>('#grix-app-file-input')!;
 
-  let activePage = 'apps';
   let apps: AppEntry[] = [];
   let groups: string[] = [];
   let assignments: Record<string, string> = {};
@@ -304,7 +302,7 @@ export function mountWorkspaceExperience(): void {
   }
 
   function displayName(filename: string): string {
-    return filename.replace(/^[0-9a-f]{8}-[0-9a-f-]{27}_/i, '');
+    return filename.replace(/^[0-9a-f-]{36}_/i, '');
   }
 
   function renderApps(): void {
@@ -499,33 +497,42 @@ export function mountWorkspaceExperience(): void {
     if (!files?.length) return;
     const filesToUpload = [...files];
     let completed = 0;
+    let failed = 0;
     for (const file of filesToUpload) {
       if (!file.name.toLowerCase().endsWith('.apk')) {
+        failed += 1;
         showFeedback(appFeedback, file.name + ' is not an APK file.', 'error');
         continue;
       }
       if (file.size <= 0 || file.size > 50 * 1024 * 1024) {
-        showFeedback(appFeedback, file.name + ' must be smaller than 50 MB.', 'error');
+        failed += 1;
+        showFeedback(appFeedback, file.name + ' must be between 1 byte and 50 MB.', 'error');
         continue;
       }
       const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, '-').slice(-100);
       const objectPath = readSession().user_id + '/apps/' + crypto.randomUUID() + '_' + safeName;
       showFeedback(appFeedback, 'Uploading ' + file.name + '…');
-      const response = await authenticatedFetch('/storage/v1/object/grixdroid-apks/' + escapePath(objectPath), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/vnd.android.package-archive', 'x-upsert': 'false' },
-        body: file,
-      });
-      if (!response.ok) {
-        const detail = await response.json().catch(() => null) as { message?: string } | null;
-        showFeedback(appFeedback, detail?.message || file.name + ' could not be uploaded.', 'error');
-        continue;
+      try {
+        const response = await authenticatedFetch('/storage/v1/object/grixdroid-apks/' + escapePath(objectPath), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/vnd.android.package-archive', 'x-upsert': 'false' },
+          body: file,
+        });
+        if (!response.ok) {
+          const detail = await response.json().catch(() => null) as { message?: string } | null;
+          throw new Error(detail?.message || file.name + ' could not be uploaded.');
+        }
+        completed += 1;
+      } catch (error) {
+        failed += 1;
+        showFeedback(appFeedback, error instanceof Error ? error.message : file.name + ' could not be uploaded.', 'error');
       }
-      completed += 1;
     }
     fileInput.value = '';
     await loadApps();
-    if (completed) showFeedback(appFeedback, completed + (completed === 1 ? ' app was' : ' apps were') + ' added to your library.', 'success');
+    if (completed && failed) showFeedback(appFeedback, completed + ' app(s) added. ' + failed + ' file(s) could not be uploaded.', 'info');
+    else if (completed) showFeedback(appFeedback, completed + (completed === 1 ? ' app was' : ' apps were') + ' added to your library.', 'success');
+    else if (failed) showFeedback(appFeedback, 'No apps were added. Check the file types and try again.', 'error');
   }
 
   async function loadSessions(): Promise<void> {
@@ -564,7 +571,6 @@ export function mountWorkspaceExperience(): void {
   }
 
   function switchPage(page: string): void {
-    activePage = page;
     for (const item of navButtons) {
       const selected = item.dataset.page === page;
       item.classList.toggle('active', selected);
