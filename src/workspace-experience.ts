@@ -581,10 +581,10 @@ export function mountWorkspaceExperience(): void {
     for (const panel of pages) panel.hidden = panel.dataset.pagePanel !== page;
     const titles: Record<string, string> = { apps: 'Apps', sandbox: 'Device Sandbox', sessions: 'Session History' };
     if (pageTitle) pageTitle.textContent = titles[page] || 'Workspace';
-    if (!dashboard.hidden && page === 'apps') {
+    if (dashboard?.hidden === false && page === 'apps') {
       void loadApps();
       void loadReadyDevices();
-    } else if (!dashboard.hidden && page === 'sessions') {
+    } else if (dashboard?.hidden === false && page === 'sessions') {
       void loadSessions();
     }
   }
