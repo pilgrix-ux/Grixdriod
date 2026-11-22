@@ -165,6 +165,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '      <label>Device model<select id="grix-cloud-device-model" required><option value="">Checking worker options…</option></select></label>',
     '      <button class="grix-cloud-primary" id="grix-cloud-request-submit" type="submit" disabled>Request device</button>',
     '      <p class="grix-cloud-target-status" id="grix-cloud-target-status" role="status">Checking connected Android workers…</p>',
+    '      <p class="grix-cloud-ios-note"><strong>iOS simulator plans:</strong> iPhone 11, 12, 13, 14 and 15. These will become selectable when a dedicated macOS iOS worker is connected.</p>',
     '    </form>',
     '  </div>',
     '  <div class="grix-cloud-section-heading"><div><h3>Provisioning requests</h3><p>Requests stay attached to your account.</p></div></div>',
