@@ -97,6 +97,7 @@ export function getPhysicalWorkerConfig(env = process.env) {
     pollMs: positiveInt(env.GRIXDROID_POLL_MS, 5000, 1500, 30000),
     actionPollMs: positiveInt(env.GRIXDROID_ACTION_POLL_MS, 350, 100, 2000),
     sessionIdleMs: positiveInt(env.GRIXDROID_PHYSICAL_SESSION_IDLE_MS, 60 * 60 * 1000, 5 * 60 * 1000, 4 * 60 * 60 * 1000),
+    sessionLeaseMs: positiveInt(env.GRIXDROID_PHYSICAL_SESSION_LEASE_MS, 120000, 60000, 300000),
   };
 }
 
@@ -458,7 +459,7 @@ async function executeAction(config, meta, action, userId, deviceId) {
 
 async function createSession(config, meta, userId) {
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + config.sessionIdleMs);
+  const expiresAt = new Date(now.getTime() + config.sessionLeaseMs);
   const rows = await rest(config, 'cloud_device_sessions', '', {
     method: 'POST',
     prefer: 'return=representation',
@@ -475,6 +476,7 @@ async function createSession(config, meta, userId) {
   if (!row || !UUID_RE.test(row.id || '')) throw new Error('Supabase did not create a valid owner-scoped device session.');
   meta.sessionId = row.id;
   meta.lastActivityAt = Date.now();
+  meta.lastSessionHeartbeatAt = Date.now();
 }
 
 async function touchSession(config, meta) {
@@ -485,9 +487,10 @@ async function touchSession(config, meta) {
     prefer: 'return=minimal',
     body: {
       last_seen_at: now.toISOString(),
-      expires_at: new Date(now.getTime() + config.sessionIdleMs).toISOString(),
+      expires_at: new Date(now.getTime() + config.sessionLeaseMs).toISOString(),
     },
   });
+  meta.lastSessionHeartbeatAt = Date.now();
 }
 
 async function finishSession(config, meta, state) {
@@ -523,6 +526,7 @@ async function persistCurrent(config, meta) {
     buildFingerprint: meta.identity.buildFingerprint,
     baselinePackages: meta.baselinePackages,
     lastActivityAt: meta.lastActivityAt,
+    lastSessionHeartbeatAt: meta.lastSessionHeartbeatAt,
   };
   const temp = config.stateFile + '.tmp-' + randomUUID();
   await writeFile(temp, JSON.stringify(disk, null, 2), { mode: 0o600, flag: 'wx' });
@@ -783,6 +787,10 @@ async function startPhysicalWorker(config = getPhysicalWorkerConfig()) {
       await workerHeartbeat(config, identity);
 
       if (current) {
+        if (Date.now() - (current.lastSessionHeartbeatAt || 0) > 30000) {
+          await touchSession(config, current);
+          await persistCurrent(config, current);
+        }
         if (Date.now() - current.lastActivityAt > config.sessionIdleMs) {
           await stopCurrent(config, current, 'idle-timeout');
           current = null;
