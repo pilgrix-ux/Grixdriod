@@ -60,7 +60,7 @@ A future worker should:
 6. Expose a short-lived session through an authenticated streaming gateway.
 7. On stop, checkpoint state, detach the volume and release worker capacity without deleting customer data.
 
-The worker defaults to Google's official Android 15 (API 35) `google_apis_playstore` Emulator system image and Pixel 7 AVD profile. The database-backed Device Sandbox selector supports Android 12, 12L, 13, 14, 15 and 16 plus Pixel 6–9 / Pro AVD profiles, but it only displays version/model pairs advertised by a recently active worker. A selector choice is validated again by Row Level Security and the worker queue before provisioning. A worker must have each selected SDK system image and AVD model installed locally; supported choices are not silently faked or substituted. This is a genuine Android system image with the Android framework/userspace and, for the Play Store target, Google Play services; it is not the browser-based Dalvik HLE experiment. The worker checks Android build properties, Settings and the packages expected for the selected image before marking a device ready. Use of Google Play-enabled images for a public hosted service needs a separate review of Google's applicable terms; GRIXDroid does not copy or redistribute Google proprietary packages.
+The worker defaults to Google's official Android 15 (API 35) `google_apis_playstore` Emulator system image and Pixel 7 AVD profile. The database-backed Device Sandbox selector supports Android 12, 12L, 13, 14, 15 and 16 plus Pixel 6–9 / Pro profiles and virtual screen profiles for Samsung Galaxy S22/S23/S24/S24 Ultra, OPPO Find X8 Pro and Xiaomi 14 Ultra. It only displays version/model pairs advertised by a recently active worker. A selector choice is validated again by Row Level Security and the worker queue before provisioning. A worker must have each selected SDK system image and profile enabled in its configuration; supported choices are not silently faked or substituted. Samsung/OPPO/Xiaomi profiles adjust the virtual device manufacturer/name and screen dimensions on an Android system image; they do not include proprietary OEM firmware or guarantee exact physical-device behavior. iPhone 11–15 are listed as a future iOS target family, but require a separate macOS host running Apple's iOS Simulator and are not selectable on the Android worker. This is a genuine Android system image with the Android framework/userspace and, for the Play Store target, Google Play services; it is not the browser-based Dalvik HLE experiment. The worker checks Android build properties, Settings and the packages expected for the selected image before marking a device ready. Use of Google Play-enabled images for a public hosted service needs a separate review of Google's applicable terms; GRIXDroid does not copy or redistribute Google proprietary packages.
 
 ## Configuration
 
@@ -71,7 +71,7 @@ Copy .env.example to .env.local and set:
 
 Only the publishable key belongs in the frontend. Never set VITE_SUPABASE_SERVICE_ROLE_KEY.
 
-Apply the ordered migrations under `supabase/migrations/` to the dedicated GRIXDroid Supabase project. The latest migration, `20261122002011_grixdroid_selectable_android_targets.sql`, adds selected Android release/model metadata, a worker-capability lookup RPC, and queue/RLS validation. Do not reuse a different application's project without intentionally reviewing ownership, billing and existing data.
+Apply the ordered migrations under `supabase/migrations/` to the dedicated GRIXDroid Supabase project. The latest migrations add selected Android release/model metadata, a worker-capability lookup RPC, queue/RLS validation, capacity-aware target discovery and the expanded Samsung/OPPO/Xiaomi profile allowlist. Do not reuse a different application's project without intentionally reviewing ownership, billing and existing data.
 
 **Data API exposure:** Supabase changed the default exposure behavior for newly created tables in 2026. If the project does not expose the public schema through its Data API, explicitly enable the public schema in the project's API settings before using this browser REST integration. The migration grants only the required table privileges and still enforces RLS.
 
@@ -103,6 +103,7 @@ The dedicated Supabase project is **Grix emulator**. Keep the following migratio
 6. `supabase/migrations/20261119194706_grixdroid_apk_owner_read_policy.sql`
 7. `supabase/migrations/20261122002011_grixdroid_selectable_android_targets.sql`
 8. `supabase/migrations/20261122002238_grixdroid_capacity_aware_device_options.sql`
+9. `supabase/migrations/20261122003000_grixdroid_expanded_android_profiles.sql`
 
 The worker-queue migration adds service-role-only RPCs for heartbeat, atomic provisioning claims, lease renewal, completion/failure and device-state changes. The device-controls migration adds an owner-scoped command queue. The APK-install migration adds a private `grixdroid-apks` bucket (50 MB per APK), per-account folder policies, APK-install commands and a worker claim RPC that returns the owning user ID. The owner-read policy allows a signed-in user to inspect only their own APK objects. Worker RPCs remain service-role-only and are not callable by `anon` or `authenticated`.
 
@@ -182,4 +183,4 @@ This is the control-plane/data-model foundation, not an Appetize.io replacement 
 - No public network egress/IP isolation is provisioned yet.
 - No Google Play packages are redistributed by GRIXDroid.
 
-The database and eight migrations are already in place, including the Android target-selection migration. The next deployment milestone is to enroll a persistent Android worker on a durable host, install the Android versions and device profiles to be offered, configure the MediaMTX gateway and Vercel frontend variables, then verify real Android boot, touch control, persistent stop/start and end-to-end WebRTC playback.
+The database and nine migrations are already in place, including the Android target-selection migration. The next deployment milestone is to enroll a persistent Android worker on a durable host, install the Android versions and device profiles to be offered, configure the MediaMTX gateway and Vercel frontend variables, then verify real Android boot, touch control, persistent stop/start and end-to-end WebRTC playback.
