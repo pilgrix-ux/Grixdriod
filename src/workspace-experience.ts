@@ -206,6 +206,13 @@ export function mountWorkspaceExperience(): void {
   if (signOut && accountSlot) accountSlot.append(signOut);
   refresh?.remove();
   toolbar?.remove();
+  const sandboxIntro = shell.querySelector<HTMLElement>('[data-page-panel="sandbox"] .grix-workspace-page-intro');
+  if (refresh && sandboxIntro) {
+    refresh.className = 'grix-workspace-button secondary';
+    refresh.textContent = 'Refresh devices';
+    refresh.setAttribute('aria-label', 'Refresh devices and Android version/model availability');
+    sandboxIntro.append(refresh);
+  }
 
   const deviceSection = shell.querySelector<HTMLElement>('#grix-workspace-device-section');
   const requestSection = shell.querySelector<HTMLElement>('#grix-workspace-request-section');
