@@ -93,7 +93,7 @@ The worker API is not the public customer session gateway. Keep it on loopback o
 
 ### Database setup
 
-The dedicated Supabase project is **Grix emulator**. It is active, and all six GRIXDroid migrations below are recorded in its migration history. Keep these files in sync with the database history:
+The dedicated Supabase project is **Grix emulator**. The six initial GRIXDroid migrations below were recorded in its migration history. A seventh migration adds the resolution-control allowlist; apply it to the dedicated project before using the display-quality selector. Keep these files in sync with the database history:
 
 1. `supabase/migrations/20261119175734_grixdroid_cloud_devices.sql`
 2. `supabase/migrations/20261119175837_grixdroid_worker_queue.sql`
@@ -101,6 +101,7 @@ The dedicated Supabase project is **Grix emulator**. It is active, and all six G
 4. `supabase/migrations/20261119192634_grixdroid_device_controls.sql`
 5. `supabase/migrations/20261119194619_grixdroid_apk_install_tools.sql`
 6. `supabase/migrations/20261119194706_grixdroid_apk_owner_read_policy.sql`
+7. `supabase/migrations/20261122010000_grixdroid_display_resolution_actions.sql`
 
 The worker-queue migration adds service-role-only RPCs for heartbeat, atomic provisioning claims, lease renewal, completion/failure and device-state changes. The device-controls migration adds an owner-scoped command queue. The APK-install migration adds a private `grixdroid-apks` bucket (50 MB per APK), per-account folder policies, APK-install commands and a worker claim RPC that returns the owning user ID. The owner-read policy allows a signed-in user to inspect only their own APK objects. Worker RPCs remain service-role-only and are not callable by `anon` or `authenticated`.
 
@@ -162,7 +163,7 @@ The local API uses a bearer token:
 | GET | `/api/v1/devices/:id/screenshot` | Capture the Android display as PNG |
 | POST | `/api/v1/devices/:id/actions` | Allowlisted tap, swipe, navigation key or text action |
 
-This API is intended for host-local development and diagnostics. It is not routed through the website's customer authentication. The optional MediaMTX WHIP/WHEP publishing path is separate; see [WebRTC streaming setup](WEBRTC_STREAMING.md). Do not expose the worker API directly to the internet. Remote binding requires explicit opt-in, a long API token, a strict origin list and a trusted HTTPS/private-network gateway.
+This API is intended for host-local development and diagnostics. It is not routed through the website's customer authentication. The scrcpy publisher uses a 1600-pixel maximum long edge so the free 720p portrait preset (720×1600) is not reduced to 1280 pixels before encoding. The browser/device stream still needs a real end-to-end gateway test before advertised as a verified 720p stream. The optional MediaMTX WHIP/WHEP publishing path is separate; see [WebRTC streaming setup](WEBRTC_STREAMING.md). Do not expose the worker API directly to the internet. Remote binding requires explicit opt-in, a long API token, a strict origin list and a trusted HTTPS/private-network gateway.
 
 ### Persistence and operational limits
 

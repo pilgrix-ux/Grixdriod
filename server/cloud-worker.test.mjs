@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import os from 'node:os';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { getWorkerConfig, parseResolution, parseSystemImagePackage, resolveAvdManagerPath, validateAction } from './cloud-worker.mjs';
+import { getWorkerConfig, parseAvdSystemImagePath, parseResolution, parseSystemImagePackage, profileSettings, resolveAvdManagerPath, validateAction } from './cloud-worker.mjs';
 
 test('normalizes tap coordinates without accepting values outside the screen', () => {
   assert.deepEqual(validateAction({ type: 'tap', x: 0.5, y: 0.25 }), { type: 'tap', x: 0.5, y: 0.25 });
@@ -23,6 +23,17 @@ test('accepts only the Android navigation and power key allowlist', () => {
   assert.deepEqual(validateAction({ type: 'key', key: 'HOME' }), { type: 'key', key: 'HOME', code: '3' });
   assert.deepEqual(validateAction({ type: 'key', key: 'POWER' }), { type: 'key', key: 'POWER', code: '26' });
   assert.throws(() => validateAction({ type: 'key', key: 'SHELL' }), /Supported keys/);
+});
+
+test('allows the supported Android display quality presets and rejects unsupported ones', () => {
+  assert.deepEqual(validateAction({ type: 'resolution', preset: '720p' }), {
+    type: 'resolution', preset: '720p', width: 720, height: 1600,
+  });
+  assert.deepEqual(validateAction({ type: 'resolution', preset: '180p' }), {
+    type: 'resolution', preset: '180p', width: 180, height: 400,
+  });
+  assert.throws(() => validateAction({ type: 'resolution', preset: '1080p' }), /Supported display quality presets/);
+  assert.throws(() => validateAction({ type: 'resolution', preset: 'ultra' }), /Supported display quality presets/);
 });
 
 test('validates Android rotation, dark mode and font-size controls', () => {
@@ -70,6 +81,23 @@ test('reads the final active display resolution from adb output', () => {
   assert.deepEqual(parseResolution('unknown'), { width: 0, height: 0 });
 });
 
+test('parses Android AVD image paths with optional whitespace and Windows separators', () => {
+  const newline = String.fromCharCode(10);
+  const backslash = String.fromCharCode(92);
+  const relativePath = ['system-images', 'android-35', 'google_apis_playstore', 'x86_64'].join('/');
+  const windowsPath = ['C:', 'Android', 'Sdk', 'system-images', 'android-35', 'google_apis_playstore', 'x86_64'].join(backslash);
+
+  assert.equal(
+    parseAvdSystemImagePath('AvdId = pixel_7' + newline + 'image.sysdir.1 = ' + relativePath + '/' + newline),
+    relativePath,
+  );
+  assert.equal(
+    parseAvdSystemImagePath('image.sysdir.1=' + windowsPath + backslash),
+    windowsPath.split(backslash).join('/'),
+  );
+  assert.equal(parseAvdSystemImagePath('AvdId = broken' + newline), '');
+});
+
 test('parses the official Google Play Android Emulator system image', () => {
   assert.deepEqual(parseSystemImagePackage('system-images;android-35;google_apis_playstore;x86_64'), {
     apiLevel: 35,
@@ -80,6 +108,11 @@ test('parses the official Google Play Android Emulator system image', () => {
   });
   assert.equal(parseSystemImagePackage('system-images;android-35;google_apis;x86_64').hasPlayStore, false);
   assert.throws(() => parseSystemImagePackage('system-images;android-35;../bad;x86_64'), /must look like/);
+});
+
+test('new Android devices start with the free 720p portrait display size', () => {
+  assert.equal(profileSettings('compact').resolution, '720x1600');
+  assert.equal(profileSettings('standard').resolution, '720x1600');
 });
 
 test('worker config clamps capacity and keeps its API loopback-only by default', () => {

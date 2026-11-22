@@ -39,6 +39,16 @@ async function waitFor(check, description, timeoutMs = 120000) {
   throw new Error('Timed out waiting for ' + description + (lastError ? ': ' + lastError.message : '.'));
 }
 
+function parseActiveDisplaySize(output) {
+  const lines = String(output || '').split(String.fromCharCode(10));
+  const line = [...lines].reverse().find((value) => value.includes('x'));
+  if (!line) return null;
+  const sizeText = line.slice(line.lastIndexOf(':') + 1).trim();
+  const dimensions = sizeText.split('x').map((value) => Number(value.trim()));
+  if (dimensions.length !== 2 || !dimensions.every(Number.isFinite)) return null;
+  return { width: dimensions[0], height: dimensions[1] };
+}
+
 async function listen(server) {
   await new Promise((resolve, reject) => {
     server.once('error', reject);
@@ -66,6 +76,12 @@ async function main() {
   const port = Number(serialMatch[2]);
 
   const dataRoot = path.join(runnerTemp, 'grixdroid-worker-integration-data');
+  const avdConfigPath = path.join(avdHome, avdName + '.avd', 'config.ini');
+  const avdConfig = await run(process.execPath, ['-e', "const fs=require('node:fs'); const p=process.argv[1]; const s=fs.readFileSync(p,'utf8'); console.log(s.split(/\\r?\\n/).filter(x=>/^\\s*image\\.sysdir\\.1\\s*=/.test(x)).join('\\n') || 'image.sysdir.1 is missing')", avdConfigPath]);
+  console.log('[smoke] AVD home:', avdHome);
+  console.log('[smoke] AVD config:', avdConfigPath);
+  console.log('[smoke] AVD image:', String(avdConfig.stdout).trim());
+  console.log('[smoke] Worker image:', systemImage);
   const deviceDir = path.join(dataRoot, 'devices', REQUEST_ID);
   await mkdir(deviceDir, { recursive: true });
   await writeFile(path.join(deviceDir, 'device.json'), JSON.stringify({
@@ -85,8 +101,20 @@ async function main() {
 
   // A tiny local PostgREST-shaped control plane keeps this integration test independent
   // from any real Supabase project or production credentials.
+  let pendingResolutionAction = null;
+  let resolutionActionClaimed = false;
+  let resolutionActionResult = null;
   const controlPlane = createServer(async (req, res) => {
-    for await (const _chunk of req) { /* Drain the small RPC body. */ }
+    const chunks = [];
+    for await (const chunk of req) chunks.push(Buffer.from(chunk));
+    let payload = {};
+    try {
+      if (chunks.length) payload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    } catch {
+      res.writeHead(400).end('Invalid test RPC JSON.');
+      return;
+    }
+
     const route = new URL(req.url || '/', 'http://127.0.0.1').pathname;
     if (req.method !== 'POST' || !route.startsWith('/rest/v1/rpc/')) {
       res.writeHead(404).end();
@@ -95,6 +123,22 @@ async function main() {
     const rpc = route.slice('/rest/v1/rpc/'.length);
     if (rpc === 'grixdroid_claim_device_request') {
       res.writeHead(200, { 'Content-Type': 'application/json' }).end('[]');
+      return;
+    }
+    if (rpc === 'grixdroid_claim_device_actions') {
+      const claimed = pendingResolutionAction && !resolutionActionClaimed ? [pendingResolutionAction] : [];
+      if (claimed.length) resolutionActionClaimed = true;
+      res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(claimed));
+      return;
+    }
+    if (rpc === 'grixdroid_finish_device_action') {
+      if (payload.p_action_id === pendingResolutionAction?.action_id) {
+        resolutionActionResult = {
+          success: payload.p_success === true,
+          failureReason: payload.p_failure_reason || null,
+        };
+      }
+      res.writeHead(204).end();
       return;
     }
     res.writeHead(204).end();
@@ -166,6 +210,26 @@ async function main() {
       throw new Error('Worker did not verify the Android 15 Play Store system image: ' + JSON.stringify(listBefore));
     }
 
+    pendingResolutionAction = {
+      action_id: '44444444-4444-4444-8444-444444444444',
+      device_id: DEVICE_ID,
+      user_id: '55555555-5555-4555-8555-555555555555',
+      command: { type: 'resolution', preset: '360p' },
+    };
+    const actionResult = await waitFor(
+      async () => resolutionActionResult || false,
+      'the worker to apply the queued 360p display preset',
+    );
+    if (!actionResult.success) {
+      throw new Error('Worker rejected the 360p display preset: ' + (actionResult.failureReason || 'unknown error'));
+    }
+    const resized = await run(adb, ['-s', serial, 'shell', 'wm', 'size']);
+    const activeSize = parseActiveDisplaySize(resized.stdout);
+    if (activeSize?.width !== 360 || activeSize?.height !== 800) {
+      throw new Error('Worker did not apply the 360p Android display preset: ' + String(resized.stdout).trim());
+    }
+    console.log('[smoke] Worker action queue applied and verified the 360x800 Android display preset.');
+
     await run(adb, ['-s', serial, 'shell', 'settings', 'put', 'global', SETTING_KEY, SETTING_VALUE]);
     await run(adb, ['-s', serial, 'shell', 'sync']);
 
@@ -188,6 +252,14 @@ async function main() {
     if (!after || after.state !== 'running' || !after.hasPlayStore || !after.hasGooglePlayServices) {
       throw new Error('The restarted real Android device failed its runtime verification.');
     }
+    if (after.resolution?.width !== 360 || after.resolution?.height !== 800) {
+      throw new Error('Worker metadata did not retain the selected 360p display preset after restart: ' + JSON.stringify(after.resolution));
+    }
+    const restoredSize = await run(adb, ['-s', serial, 'shell', 'wm', 'size']);
+    const restoredActiveSize = parseActiveDisplaySize(restoredSize.stdout);
+    if (restoredActiveSize?.width !== 360 || restoredActiveSize?.height !== 800) {
+      throw new Error('Android did not retain the selected 360p display preset after worker restart: ' + String(restoredSize.stdout).trim());
+    }
 
     const screenshot = await run(adb, ['-s', serial, 'exec-out', 'screencap', '-p'], { encoding: 'buffer', maxBuffer: 16 * 1024 * 1024 });
     await writeFile(path.join(runnerTemp, 'grixdroid-playstore.png'), screenshot.stdout);
@@ -200,7 +272,7 @@ async function main() {
       ', Play Store + Google Play services verified, and Android Settings data survived GRIXDroid worker stop/start.\n');
 
     console.log('[smoke] PASS: GRIXDroid worker stopped and restarted real Android ' + after.androidRelease +
-      ' with Play Store; Android Settings data was retained.');
+      ' with Play Store; the 360p display preset and Android Settings data were retained.');
   } finally {
     if (worker && worker.exitCode === null) {
       worker.kill('SIGTERM');
