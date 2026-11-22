@@ -150,9 +150,13 @@ export function getWorkerConfig(env = process.env) {
     .split(',')
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean);
-  if (!deviceModels.length || deviceModels.some((model) => !/^[a-z0-9_]{1,48}$/.test(model)) ||
+  const supportedDeviceModels = new Set([
+    'pixel_6', 'pixel_6_pro', 'pixel_7', 'pixel_7_pro',
+    'pixel_8', 'pixel_8_pro', 'pixel_9', 'pixel_9_pro',
+  ]);
+  if (!deviceModels.length || deviceModels.some((model) => !supportedDeviceModels.has(model)) ||
       new Set(deviceModels).size !== deviceModels.length) {
-    throw new Error('GRIXDROID_DEVICE_MODELS must be a comma-separated list of unique Android Virtual Device model IDs.');
+    throw new Error('GRIXDROID_DEVICE_MODELS must contain unique supported Pixel AVD IDs (pixel_6 through pixel_9, including Pro variants).');
   }
   return {
     sdkRoot,
