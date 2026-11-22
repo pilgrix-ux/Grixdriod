@@ -1361,3 +1361,208 @@ body::before { display: none; }
     font-size: .5rem;
   }
 }
+
+
+/* GRIXDroid workspace refresh — dashboard-first, responsive, low-noise */
+.grix-cloud-panel {
+  width: min(100% - 2rem, 1240px);
+  margin: 1.4rem auto 2rem;
+  padding: clamp(1rem, 2.6vw, 2rem);
+  border: 1px solid #e5e9f0;
+  border-radius: 24px;
+  background: #fbfcfe;
+  color: #182235;
+  box-shadow: 0 20px 60px rgba(27, 39, 61, .07);
+}
+.grix-cloud-heading {
+  min-height: 58px;
+  padding: 0 0 1rem;
+  border-bottom: 1px solid #edf0f4;
+}
+.grix-cloud-brand { gap: .75rem; color: #172033; }
+.grix-cloud-brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #6755d8;
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(103, 85, 216, .2);
+}
+.grix-cloud-brand strong { font-size: .95rem; letter-spacing: .04em; }
+.grix-cloud-brand small { color: #929bad; letter-spacing: .13em; }
+.grix-cloud-status { border-color: #e3e8ef; background: #f7f9fc; color: #68758a; }
+.grix-cloud-status.connected { border-color: #ccefe0; background: #effaf5; color: #187852; }
+.grix-cloud-dashboard { gap: 1.25rem; padding-top: 1.25rem; }
+.grix-cloud-dashboard-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  min-height: 190px;
+  padding: clamp(1.35rem, 4vw, 2.6rem);
+  overflow: hidden;
+  border: 1px solid #e3e1f6;
+  border-radius: 19px;
+  background:
+    radial-gradient(circle at 82% 16%, rgba(157, 143, 255, .24), transparent 34%),
+    linear-gradient(115deg, #f2f0ff 0%, #f8f8ff 54%, #f0f4ff 100%);
+}
+.grix-cloud-dashboard-hero-copy { max-width: 650px; }
+.grix-cloud-dashboard-kicker,.grix-cloud-section-kicker {
+  display: block;
+  margin-bottom: .7rem;
+  color: #6a59c7;
+  font: 800 .61rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .15em;
+}
+.grix-cloud-dashboard-hero h1 {
+  margin: 0;
+  color: #19233a;
+  font-size: clamp(1.8rem, 4.5vw, 2.8rem);
+  font-weight: 850;
+  line-height: 1.08;
+  letter-spacing: -.055em;
+}
+.grix-cloud-dashboard-hero p {
+  max-width: 470px;
+  margin: .8rem 0 0;
+  color: #737f94;
+  font-size: .92rem;
+  line-height: 1.65;
+}
+.grix-cloud-dashboard-hero-side {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .8rem;
+  padding: .9rem 1rem;
+  border: 1px solid rgba(116, 101, 202, .16);
+  border-radius: 14px;
+  background: rgba(255,255,255,.64);
+  color: #6d7890;
+  font-size: .7rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+.grix-cloud-hero-mark {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 13px;
+  background: #6b58d0;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 900;
+  box-shadow: 0 7px 18px rgba(107,88,208,.2);
+}
+.grix-cloud-toolbar {
+  min-height: 48px;
+  padding: .15rem 0 .85rem;
+  border-bottom: 1px solid #edf0f4;
+}
+.grix-cloud-toolbar span { color: #7a8699; font-size: .76rem; }
+.grix-cloud-toolbar > div { display: flex; gap: .45rem; }
+.grix-cloud-toolbar .grix-cloud-secondary { margin: 0; }
+.grix-cloud-section-heading { align-items: end; margin-top: .25rem; }
+.grix-cloud-section-heading h3 {
+  margin: 0;
+  color: #1d293d;
+  font-size: 1.12rem;
+  font-weight: 850;
+  letter-spacing: -.035em;
+}
+.grix-cloud-section-heading p { margin-top: .3rem; color: #8994a5; font-size: .78rem; }
+.grix-cloud-section-kicker { margin-bottom: .35rem; font-size: .55rem; }
+.grix-cloud-device-list,.grix-cloud-request-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 285px), 1fr));
+  gap: .85rem;
+}
+.grix-cloud-device-card,.grix-cloud-request-card {
+  padding: 1rem;
+  border: 1px solid #e6eaf1;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(29, 43, 67, .035);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.grix-cloud-device-card:hover,.grix-cloud-request-card:hover {
+  border-color: #d4d0f2;
+  box-shadow: 0 10px 26px rgba(50, 53, 93, .07);
+  transform: translateY(-2px);
+}
+.grix-cloud-card-top strong { color: #253149; font-size: .9rem; }
+.grix-cloud-device-card p,.grix-cloud-request-card p { color: #8490a2; line-height: 1.6; }
+.grix-cloud-request-box {
+  grid-template-columns: minmax(210px, .8fr) minmax(0, 1.2fr);
+  gap: 1.35rem;
+  align-items: center;
+  padding: clamp(1rem, 2.6vw, 1.5rem);
+  border: 1px solid #e4e2f5;
+  border-radius: 17px;
+  background: linear-gradient(130deg, #f7f6ff, #fbfbff 72%);
+}
+.grix-cloud-request-box h3 { margin: 0; color: #202a40; font-size: 1.05rem; font-weight: 850; letter-spacing: -.025em; }
+.grix-cloud-request-box p { color: #7c879b; font-size: .78rem; line-height: 1.6; }
+.grix-cloud-request-note { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .9rem; }
+.grix-cloud-request-note span {
+  padding: .38rem .55rem;
+  border: 1px solid #e2dff5;
+  border-radius: 7px;
+  background: rgba(255,255,255,.7);
+  color: #6e63a9;
+  font-size: .62rem;
+  font-weight: 700;
+}
+.grix-cloud-request-form { gap: .75rem; }
+.grix-cloud-request-form label { color: #566278; font-size: .73rem; }
+.grix-cloud-request-form input,.grix-cloud-request-form select {
+  min-height: 44px;
+  border: 1px solid #dce2eb;
+  border-radius: 9px;
+  background: #fff;
+  color: #253149;
+}
+.grix-cloud-primary {
+  min-height: 45px;
+  border-radius: 9px;
+  background: #6855d2;
+  box-shadow: 0 5px 13px rgba(104,85,210,.15);
+}
+.grix-cloud-primary:hover:not(:disabled) { background: #5845c0; }
+.grix-cloud-secondary {
+  min-height: 38px;
+  border-color: #e1e6ee;
+  border-radius: 9px;
+  background: #fff;
+  color: #566278;
+}
+.grix-cloud-secondary:hover:not(:disabled) { border-color: #cdd5e1; background: #f8f9fc; }
+.grix-cloud-empty {
+  padding: 1.4rem;
+  border: 1px dashed #dfe5ee;
+  border-radius: 13px;
+  background: #fff;
+  color: #8a95a6;
+  font-size: .78rem;
+  line-height: 1.6;
+}
+.grix-cloud-notice { border-radius: 10px; }
+.grix-cloud-footnote { color: #8b96a6; }
+@media (max-width: 760px) {
+  .grix-cloud-panel { width: min(100% - 1rem, 1240px); padding: .9rem; border-radius: 18px; }
+  .grix-cloud-dashboard-hero { min-height: 0; padding: 1.35rem; }
+  .grix-cloud-dashboard-hero-side { display: none; }
+  .grix-cloud-request-box { grid-template-columns: 1fr; gap: 1rem; }
+}
+@media (max-width: 520px) {
+  .grix-cloud-heading { align-items: center; }
+  .grix-cloud-dashboard-hero { padding: 1.2rem 1rem; border-radius: 15px; }
+  .grix-cloud-dashboard-hero h1 { font-size: 1.9rem; }
+  .grix-cloud-dashboard-hero p { font-size: .8rem; }
+  .grix-cloud-toolbar { align-items: center; flex-wrap: wrap; }
+  .grix-cloud-toolbar > div { width: 100%; justify-content: flex-end; }
+  .grix-cloud-section-heading { align-items: flex-start; }
+  .grix-cloud-request-form { grid-template-columns: 1fr; }
+  .grix-cloud-request-form button { grid-column: auto; }
+}
