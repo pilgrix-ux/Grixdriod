@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import os from 'node:os';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { getWorkerConfig, parseResolution, parseSystemImagePackage, resolveAvdManagerPath, validateAction } from './cloud-worker.mjs';
+import { getWorkerConfig, parseAvdSystemImagePath, parseResolution, parseSystemImagePackage, resolveAvdManagerPath, validateAction } from './cloud-worker.mjs';
 
 test('normalizes tap coordinates without accepting values outside the screen', () => {
   assert.deepEqual(validateAction({ type: 'tap', x: 0.5, y: 0.25 }), { type: 'tap', x: 0.5, y: 0.25 });
@@ -79,6 +79,18 @@ test('text action rejects shell metacharacters and escapes spaces for Android in
 test('reads the final active display resolution from adb output', () => {
   assert.deepEqual(parseResolution('Physical size: 1080x2400\nOverride size: 720 x 1600'), { width: 720, height: 1600 });
   assert.deepEqual(parseResolution('unknown'), { width: 0, height: 0 });
+});
+
+test('parses Android AVD image paths with optional whitespace and Windows separators', () => {
+  assert.equal(
+    parseAvdSystemImagePath('AvdId = pixel_7\\nimage.sysdir.1 = system-images/android-35/google_apis_playstore/x86_64/\\n'),
+    'system-images/android-35/google_apis_playstore/x86_64',
+  );
+  assert.equal(
+    parseAvdSystemImagePath('image.sysdir.1=C:\\\\Android\\\\Sdk\\\\system-images\\\\android-35\\\\google_apis_playstore\\\\x86_64\\\\'),
+    'C:/Android/Sdk/system-images/android-35/google_apis_playstore/x86_64',
+  );
+  assert.equal(parseAvdSystemImagePath('AvdId = broken\\n'), '');
 });
 
 test('parses the official Google Play Android Emulator system image', () => {
