@@ -115,12 +115,16 @@ test('worker config exposes only the Android images and device models installed 
       'system-images;android-35;google_apis_playstore;x86_64',
       'system-images;android-36;google_apis_playstore;x86_64',
     ].join(','),
-    GRIXDROID_DEVICE_MODELS: 'pixel_7,pixel_8,pixel_9',
+    GRIXDROID_DEVICE_MODELS: 'pixel_7,pixel_8,pixel_9,samsung_galaxy_s22,samsung_galaxy_s23,samsung_galaxy_s24,samsung_galaxy_s24_ultra,oppo_find_x8_pro,xiaomi_14_ultra',
   });
   assert.deepEqual(config.systemImages.map((image) => image.androidVersion), ['14', '15', '16']);
-  assert.deepEqual(config.deviceModels, ['pixel_7', 'pixel_8', 'pixel_9']);
+  assert.deepEqual(config.deviceModels, [
+    'pixel_7', 'pixel_8', 'pixel_9',
+    'samsung_galaxy_s22', 'samsung_galaxy_s23', 'samsung_galaxy_s24', 'samsung_galaxy_s24_ultra',
+    'oppo_find_x8_pro', 'xiaomi_14_ultra',
+  ]);
   assert.throws(() => getWorkerConfig({ GRIXDROID_SYSTEM_IMAGES: 'system-images;android-37;google_apis;x86_64' }), /supported GRIXDroid range/);
-  assert.throws(() => getWorkerConfig({ GRIXDROID_DEVICE_MODELS: 'pixel_7; rm -rf' }), /supported Pixel AVD IDs/);
+  assert.throws(() => getWorkerConfig({ GRIXDROID_DEVICE_MODELS: 'pixel_7; rm -rf' }), /supported Android virtual device profile IDs/);
 });
 
 test('finds avdmanager in versioned Android SDK command-line tools directories', () => {
