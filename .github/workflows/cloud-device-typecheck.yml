@@ -6,6 +6,7 @@ on:
     paths:
       - "src/**"
       - "server/**"
+      - "scripts/**"
       - ".env.worker.example"
       - "docs/CLOUD_DEVICE_ARCHITECTURE.md"
       - "supabase/migrations/**"
@@ -60,6 +61,9 @@ jobs:
 
       - name: Test cloud worker input validation
         run: npm run test:worker
+
+      - name: Validate friends-test fleet launcher
+        run: bash -n scripts/friends-test-fleet.sh
 
       - name: Build browser application and type-check TypeScript
         run: npm run build

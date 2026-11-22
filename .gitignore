@@ -57,3 +57,6 @@ handoff-devlog.md
 .cache/
 coverage/
 .wasm-pack/
+
+# Local IDs, PIDs and logs for the private ten-worker friends-test fleet
+/.grixdroid-test-fleet/
