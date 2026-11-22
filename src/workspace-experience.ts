@@ -238,6 +238,36 @@ export function mountWorkspaceExperience(): void {
   dashboard.replaceChildren(shell);
   if (deviceSection) deviceSection.append(viewer);
 
+  // Appetize-style device workspace: keep the real device inventory, request
+  // queue and live viewer, but arrange them around a focused device stage.
+  const sandboxPage = shell.querySelector<HTMLElement>('[data-page-panel="sandbox"]');
+  if (sandboxPage && deviceSection && requestSection && requestsSection) {
+    const sandboxLayout = create('div', 'grix-appetize-layout');
+    const stage = create('section', 'grix-appetize-stage');
+    const stageHeader = create('div', 'grix-appetize-stage-header');
+    const stageTitle = create('div', 'grix-appetize-stage-title');
+    stageTitle.append(
+      create('strong', '', 'Android device'),
+      create('span', '', 'Choose a ready device to open its live screen')
+    );
+    const stageStatus = create('span', 'grix-appetize-status', 'Waiting for device');
+    stageHeader.append(stageTitle, stageStatus);
+    const preview = create('div', 'grix-appetize-preview');
+    preview.innerHTML = '<div class="grix-appetize-phone"><div class="grix-appetize-phone-screen"><span class="grix-appetize-camera"></span><span class="grix-appetize-android-mark">G</span><strong>GRIXDroid</strong><small>Your Android session appears here</small><span class="grix-appetize-preview-note">Live preview starts when a device stream is ready</span></div></div>';
+    const deviceInventory = create('div', 'grix-appetize-inventory');
+    deviceInventory.append(deviceSection);
+    stage.append(stageHeader, preview, deviceInventory);
+    const inspector = create('aside', 'grix-appetize-inspector');
+    const inspectorHeading = create('div', 'grix-appetize-inspector-heading');
+    inspectorHeading.append(create('strong', '', 'Session tools'), create('span', '', 'DEVICE SETUP'));
+    inspector.append(inspectorHeading, requestSection);
+    const activity = create('section', 'grix-appetize-activity');
+    activity.append(requestsSection);
+    sandboxLayout.append(stage, inspector, activity);
+    const footnote = sandboxPage.querySelector<HTMLElement>('.grix-workspace-footnote');
+    sandboxPage.insertBefore(sandboxLayout, footnote || null);
+  }
+
   const brandHeader = root.querySelector<HTMLElement>('.grix-cloud-heading');
   const syncBrandVisibility = () => {
     if (brandHeader) brandHeader.hidden = !dashboard.hidden;
