@@ -80,7 +80,9 @@ export function getPhysicalWorkerConfig(env = process.env) {
     expectedHardwareModel: required(env, 'GRIXDROID_PHYSICAL_HARDWARE_MODEL'),
     expectedFingerprint: required(env, 'GRIXDROID_PHYSICAL_BUILD_FINGERPRINT'),
     androidVersion,
-    requireNoAccounts: env.GRIXDROID_PHYSICAL_REQUIRE_NO_ACCOUNTS !== '0',
+    // Physical phones are shared only as dedicated, account-free lab devices.
+    enableReset: env.GRIXDROID_PHYSICAL_ENABLE_RESET === '1',
+    port: positiveInt(env.GRIXDROID_PHYSICAL_WORKER_PORT, 8790, 1024, 65535),
     adb: env.ADB_PATH || (sdkRoot ? path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb'),
     ffmpeg: env.FFMPEG_PATH || 'ffmpeg',
     scrcpyServerPath,
@@ -263,9 +265,9 @@ async function inspectDevice(config) {
     readProperty(config, serial, 'ro.product.board'),
     adb(config, serial, ['shell', 'wm', 'size']).then((r) => String(r.stdout || '')),
     adb(config, serial, ['shell', 'pm', 'list', 'users']).then((r) => String(r.stdout || '')),
-    config.requireNoAccounts ? adb(config, serial, ['shell', 'dumpsys', 'account']).then((r) => String(r.stdout || '')) : Promise.resolve(''),
+    adb(config, serial, ['shell', 'dumpsys', 'account']).then((r) => String(r.stdout || '')),
   ]);
-  if (config.requireNoAccounts && /\bAccount\s*\{\s*name\s*=/.test(accounts)) {
+  if (/\bAccount\s*\{\s*name\s*=/.test(accounts)) {
     throw new Error('The configured lab handset contains one or more signed-in Android accounts. Remove personal accounts before enrolling it.');
   }
   const userIds = [...users.matchAll(/UserInfo\{(\d+):/g)].map((m) => Number(m[1]));
@@ -376,6 +378,7 @@ async function listThirdPartyPackages(config) {
 }
 
 async function resetTestData(config, baselinePackages) {
+  if (!config.enableReset) throw new Error('Physical-device reset is disabled. Set GRIXDROID_PHYSICAL_ENABLE_RESET=1 only on a dedicated lab handset.');
   const currentPackages = await listThirdPartyPackages(config);
   const addedPackages = packagesToRemove(currentPackages, baselinePackages || []);
   for (const packageName of addedPackages) {
@@ -390,6 +393,10 @@ async function resetTestData(config, baselinePackages) {
   }
   await adb(config, config.serial, ['logcat', '-c']).catch(() => {});
   await adb(config, config.serial, ['shell', 'cmd', 'clipboard', 'clear']).catch(() => {});
+  // This handset is dedicated to testing: clear shared user files as well as app-private data.
+  for (const folder of ['Download', 'Documents', 'Movies', 'Pictures', 'Music', 'DCIM']) {
+    await adb(config, config.serial, ['shell', 'sh', '-c', 'find /sdcard/' + folder + ' -mindepth 1 -maxdepth 1 -exec rm -rf {} +']).catch(() => {});
+  }
   return { uninstalledPackages: addedPackages.length, clearedPackages: (baselinePackages || []).length };
 }
 
@@ -709,6 +716,7 @@ async function restoreOrCleanPrevious(config, identity) {
 
 async function startPhysicalWorker(config = getPhysicalWorkerConfig()) {
   if (!UUID_RE.test(config.workerId)) throw new Error('GRIXDROID_WORKER_ID must be a stable UUID.');
+  if (!config.enableReset) throw new Error('Physical worker startup is blocked until GRIXDROID_PHYSICAL_ENABLE_RESET=1 is explicitly set for a dedicated, account-free lab handset.');
   await mkdir(config.stateRoot, { recursive: true, mode: 0o700 });
   await assertStreamingTools(config);
 
@@ -732,7 +740,7 @@ async function startPhysicalWorker(config = getPhysicalWorkerConfig()) {
   });
   await new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(positiveInt(process.env.GRIXDROID_WORKER_PORT, 8790, 1024, 65535), '127.0.0.1', resolve);
+    server.listen(config.port, '127.0.0.1', resolve);
   });
 
   process.stdout.write('[physical-worker] Local health endpoint listening on 127.0.0.1.\n');
@@ -760,10 +768,10 @@ async function startPhysicalWorker(config = getPhysicalWorkerConfig()) {
 
   while (!stopping) {
     try {
+      // Any ADB or identity-check failure removes this worker's advertised target immediately.
+      // The database then stops offering the handset while it is offline or has mismatched firmware.
       const identity = await inspectDevice(config).catch((error) => {
-        if (/not attached through a USB transport|manufacturer does not match|product model does not match|hardware model does not match|fingerprint does not match|Android release does not match|virtual Android|accounts|extra users/i.test(safeError(error))) {
-          throw error;
-        }
+        process.stderr.write('[physical-worker] Handset verification failed; target withdrawn: ' + safeError(error) + '\\n');
         return null;
       });
       lastIdentity = identity;
