@@ -1147,10 +1147,16 @@ export async function startCloudWorker(config = getWorkerConfig()) {
 
   const sessionTimer = setInterval(() => {
     for (const meta of instances.values()) {
-      if (meta.state !== 'running' || !meta.sessionId || Date.now() - (meta.lastSessionHeartbeatAt || 0) < 30000) continue;
+      if (meta.state !== 'running' || Date.now() - (meta.lastSessionHeartbeatAt || 0) < 30000) continue;
       void touchDeviceSession(config, meta)
         .then(() => persistMeta(meta))
-        .catch((error) => process.stderr.write('[worker] Session lease renewal failed: ' + error.message + '\n'));
+        .catch(async (error) => {
+          await stopWebRTCStream(config, meta).catch(() => {});
+          await finishDeviceSession(config, meta, 'failed');
+          meta.sessionId = null;
+          meta.lastSessionHeartbeatAt = 0;
+          process.stderr.write('[worker] Session lease renewal failed; stream closed: ' + error.message + '\n');
+        });
     }
   }, 10000);
   sessionTimer.unref();
@@ -1160,8 +1166,14 @@ export async function startCloudWorker(config = getWorkerConfig()) {
     stopping = true;
     clearInterval(actionTimer);
     clearInterval(sessionTimer);
+    for (const meta of instances.values()) {
+      if (meta.state !== 'running') continue;
+      await stopWebRTCStream(config, meta).catch(() => {});
+      await finishDeviceSession(config, meta, 'disconnected');
+      await persistMeta(meta).catch(() => {});
+    }
     server.close();
-    process.stdout.write('[worker] Worker API stopped. Android devices and persistent volumes were left intact.\n');
+    process.stdout.write('[worker] Worker API stopped. Android devices and persistent volumes were left intact; streams were closed and session leases revoked.\n');
   };
   process.once('SIGINT', () => { void shutdown(); });
   process.once('SIGTERM', () => { void shutdown(); });
