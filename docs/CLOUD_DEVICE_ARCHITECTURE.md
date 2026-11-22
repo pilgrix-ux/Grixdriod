@@ -102,6 +102,7 @@ The dedicated Supabase project is **Grix emulator**. Keep the following migratio
 5. `supabase/migrations/20261119194619_grixdroid_apk_install_tools.sql`
 6. `supabase/migrations/20261119194706_grixdroid_apk_owner_read_policy.sql`
 7. `supabase/migrations/20261122002011_grixdroid_selectable_android_targets.sql`
+8. `supabase/migrations/20261122002238_grixdroid_capacity_aware_device_options.sql`
 
 The worker-queue migration adds service-role-only RPCs for heartbeat, atomic provisioning claims, lease renewal, completion/failure and device-state changes. The device-controls migration adds an owner-scoped command queue. The APK-install migration adds a private `grixdroid-apks` bucket (50 MB per APK), per-account folder policies, APK-install commands and a worker claim RPC that returns the owning user ID. The owner-read policy allows a signed-in user to inspect only their own APK objects. Worker RPCs remain service-role-only and are not callable by `anon` or `authenticated`.
 
@@ -181,4 +182,4 @@ This is the control-plane/data-model foundation, not an Appetize.io replacement 
 - No public network egress/IP isolation is provisioned yet.
 - No Google Play packages are redistributed by GRIXDroid.
 
-The database and seven migrations are already in place, including the Android target-selection migration. The next deployment milestone is to enroll a persistent Android worker on a durable host, install the Android versions and device profiles to be offered, configure the MediaMTX gateway and Vercel frontend variables, then verify real Android boot, touch control, persistent stop/start and end-to-end WebRTC playback.
+The database and eight migrations are already in place, including the Android target-selection migration. The next deployment milestone is to enroll a persistent Android worker on a durable host, install the Android versions and device profiles to be offered, configure the MediaMTX gateway and Vercel frontend variables, then verify real Android boot, touch control, persistent stop/start and end-to-end WebRTC playback.
