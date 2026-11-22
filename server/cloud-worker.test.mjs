@@ -82,15 +82,20 @@ test('reads the final active display resolution from adb output', () => {
 });
 
 test('parses Android AVD image paths with optional whitespace and Windows separators', () => {
+  const newline = String.fromCharCode(10);
+  const backslash = String.fromCharCode(92);
+  const relativePath = ['system-images', 'android-35', 'google_apis_playstore', 'x86_64'].join('/');
+  const windowsPath = ['C:', 'Android', 'Sdk', 'system-images', 'android-35', 'google_apis_playstore', 'x86_64'].join(backslash);
+
   assert.equal(
-    parseAvdSystemImagePath('AvdId = pixel_7\\nimage.sysdir.1 = system-images/android-35/google_apis_playstore/x86_64/\\n'),
-    'system-images/android-35/google_apis_playstore/x86_64',
+    parseAvdSystemImagePath('AvdId = pixel_7' + newline + 'image.sysdir.1 = ' + relativePath + '/' + newline),
+    relativePath,
   );
   assert.equal(
-    parseAvdSystemImagePath('image.sysdir.1=C:\\\\Android\\\\Sdk\\\\system-images\\\\android-35\\\\google_apis_playstore\\\\x86_64\\\\'),
-    'C:/Android/Sdk/system-images/android-35/google_apis_playstore/x86_64',
+    parseAvdSystemImagePath('image.sysdir.1=' + windowsPath + backslash),
+    windowsPath.split(backslash).join('/'),
   );
-  assert.equal(parseAvdSystemImagePath('AvdId = broken\\n'), '');
+  assert.equal(parseAvdSystemImagePath('AvdId = broken' + newline), '');
 });
 
 test('parses the official Google Play Android Emulator system image', () => {
