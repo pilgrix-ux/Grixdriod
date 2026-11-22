@@ -17,24 +17,30 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-# The private config is a simple KEY=value file; keep it out of Git.
-set -a
-# shellcheck disable=SC1090
-source "$ENV_FILE"
-set +a
+# Parse the same dotenv format Node uses for the worker. Do not source this file
+# as shell code: Android SDK package values contain semicolons and are not shell syntax.
+read_env() {
+  node --env-file="$ENV_FILE" -e 'process.stdout.write(process.env[process.argv[1]] ?? "")' "$1"
+}
 
 if [[ "${1:-}" == "start" ]]; then
   for required in ANDROID_SDK_ROOT SUPABASE_URL SUPABASE_API_KEY SUPABASE_SERVICE_ROLE_JWT; do
-    if [[ -z "${!required:-}" || "${!required}" == *"replace_with"* ]]; then
+    value="$(read_env "$required")"
+    if [[ -z "$value" || "$value" == *"replace_with"* ]]; then
       echo "Set $required in $ENV_FILE before starting the test fleet."
       exit 1
     fi
   done
+
+  ANDROID_SDK_ROOT="$(read_env ANDROID_SDK_ROOT)"
   if [[ ! -x "$ANDROID_SDK_ROOT/emulator/emulator" || ! -x "$ANDROID_SDK_ROOT/platform-tools/adb" ]]; then
     echo "Android Emulator and ADB must be installed under ANDROID_SDK_ROOT."
     exit 1
   fi
-  if [[ "${GRIXDROID_ACCEL:-auto}" == "off" && "${GRIXDROID_ENABLE_SOFTWARE_EMULATION:-0}" != "1" ]]; then
+
+  accel="$(read_env GRIXDROID_ACCEL)"
+  software_opt_in="$(read_env GRIXDROID_ENABLE_SOFTWARE_EMULATION)"
+  if [[ "${accel:-auto}" == "off" && "${software_opt_in:-0}" != "1" ]]; then
     echo "Ten software-emulated Android instances are not a suitable friends-test fleet."
     echo "Use a host with hardware virtualization enabled."
     exit 1
@@ -60,7 +66,9 @@ case "${1:-}" in
       fi
       worker_id="$(cat "$id_file")"
       port=$((BASE_PORT + 10#$n - 1))
-      data_root="${GRIXDROID_DATA_ROOT:-/var/lib/grixdroid}/friends-test/worker-$n"
+      data_root="$(read_env GRIXDROID_DATA_ROOT)"
+      data_root="${data_root:-/var/lib/grixdroid}"
+      worker_data_root="$data_root/friends-test/worker-$n"
       label="grix-friends-test-$n"
       nohup env \
         GRIXDROID_WORKER_ID="$worker_id" \
@@ -68,7 +76,7 @@ case "${1:-}" in
         GRIXDROID_WORKER_PORT="$port" \
         GRIXDROID_WORKER_HOST=127.0.0.1 \
         GRIXDROID_MAX_DEVICES=1 \
-        GRIXDROID_DATA_ROOT="$data_root" \
+        GRIXDROID_DATA_ROOT="$worker_data_root" \
         node --env-file="$ENV_FILE" "$ROOT/server/cloud-worker.mjs" \
         > "$log_file" 2>&1 </dev/null &
       pid=$!
