@@ -39,6 +39,20 @@ async function waitFor(check, description, timeoutMs = 120000) {
   throw new Error('Timed out waiting for ' + description + (lastError ? ': ' + lastError.message : '.'));
 }
 
+async function createAvd(avdManager, avdHome, sdkRoot, avdName, systemImage) {
+  const env = { ...process.env, ANDROID_AVD_HOME: avdHome, ANDROID_SDK_ROOT: sdkRoot, ANDROID_HOME: sdkRoot };
+  const child = spawn(avdManager, [
+    'create', 'avd', '--name', avdName, '--package', systemImage, '--device', 'pixel_7', '--force',
+  ], { env, stdio: ['pipe', 'ignore', 'pipe'], windowsHide: true });
+  let stderr = '';
+  child.stderr.on('data', (chunk) => { stderr = (stderr + String(chunk)).slice(-3000); });
+  child.stdin.end('no\\n');
+  await new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('close', (code) => code === 0 ? resolve(true) : reject(new Error(stderr || 'avdmanager failed with exit code ' + code)));
+  });
+}
+
 async function listen(server) {
   await new Promise((resolve, reject) => {
     server.once('error', reject);
@@ -51,10 +65,11 @@ async function listen(server) {
 
 async function main() {
   const sdkRoot = process.env.ANDROID_SDK_ROOT || process.env.ANDROID_HOME;
-  const avdHome = process.env.ANDROID_AVD_HOME || path.join(os.homedir(), '.android', 'avd');
-  const avdName = process.env.GRIXDROID_SMOKE_AVD_NAME || 'grixdroid-real-android';
-  const systemImage = process.env.GRIXDROID_SYSTEM_IMAGE || 'system-images;android-35;google_apis_playstore;x86_64';
   const runnerTemp = process.env.RUNNER_TEMP || os.tmpdir();
+  // Keep the worker's persistent AVD separate from the emulator-runner AVD.
+  const avdHome = path.join(runnerTemp, 'grixdroid-worker-avd-home');
+  const avdName = process.env.GRIXDROID_SMOKE_AVD_NAME || 'grixdroid-worker-persistence-test';
+  const systemImage = process.env.GRIXDROID_SYSTEM_IMAGE || 'system-images;android-35;google_apis_playstore;x86_64';
   if (!sdkRoot) throw new Error('The Android Emulator smoke job did not provide ANDROID_SDK_ROOT or ANDROID_HOME.');
 
   const adb = process.env.ADB_PATH || path.join(sdkRoot, 'platform-tools', 'adb');
@@ -62,8 +77,20 @@ async function main() {
   const devices = await run(adb, ['devices']);
   const serialMatch = String(devices.stdout).match(/^(emulator-(\d+))\s+device$/m);
   if (!serialMatch) throw new Error('No booted Android Emulator is available for the worker integration test.');
-  const serial = serialMatch[1];
-  const port = Number(serialMatch[2]);
+  const runnerSerial = serialMatch[1];
+  const occupiedPorts = new Set([...String(devices.stdout).matchAll(/^emulator-(\\d+)\\s+/gm)].map((match) => Number(match[1])));
+  let port = 5554;
+  while (occupiedPorts.has(port) && port <= 5584) port += 2;
+  if (port > 5584) throw new Error('No free emulator port is available for the worker persistence test.');
+  const serial = 'emulator-' + port;
+  const avdManager = process.env.AVDMANAGER_PATH || path.join(sdkRoot, 'cmdline-tools', 'latest', 'bin', process.platform === 'win32' ? 'avdmanager.bat' : 'avdmanager');
+  await mkdir(avdHome, { recursive: true });
+  await createAvd(avdManager, avdHome, sdkRoot, avdName, systemImage);
+
+  // The runner AVD has already been checked for Play Store above. Stop it so
+  // the worker test can use the available emulator memory without sharing its AVD.
+  await run(adb, ['-s', runnerSerial, 'emu', 'kill']).catch(() => {});
+  await sleep(1500);
 
   const dataRoot = path.join(runnerTemp, 'grixdroid-worker-integration-data');
   const deviceDir = path.join(dataRoot, 'devices', REQUEST_ID);
@@ -157,6 +184,7 @@ async function main() {
       return body;
     };
 
+    await api('POST', '/api/v1/devices/' + DEVICE_ID + '/start');
     const listBefore = await waitFor(async () => {
       const result = await api('GET', '/api/v1/devices');
       const device = result.devices?.find((item) => item.id === DEVICE_ID && item.state === 'running');
