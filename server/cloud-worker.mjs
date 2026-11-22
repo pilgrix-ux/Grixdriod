@@ -153,10 +153,12 @@ export function getWorkerConfig(env = process.env) {
   const supportedDeviceModels = new Set([
     'pixel_6', 'pixel_6_pro', 'pixel_7', 'pixel_7_pro',
     'pixel_8', 'pixel_8_pro', 'pixel_9', 'pixel_9_pro',
+    'samsung_galaxy_s22', 'samsung_galaxy_s23', 'samsung_galaxy_s24', 'samsung_galaxy_s24_ultra',
+    'oppo_find_x8_pro', 'xiaomi_14_ultra',
   ]);
   if (!deviceModels.length || deviceModels.some((model) => !supportedDeviceModels.has(model)) ||
       new Set(deviceModels).size !== deviceModels.length) {
-    throw new Error('GRIXDROID_DEVICE_MODELS must contain unique supported Pixel AVD IDs (pixel_6 through pixel_9, including Pro variants).');
+    throw new Error('GRIXDROID_DEVICE_MODELS must contain unique supported Android virtual device profile IDs.');
   }
   return {
     sdkRoot,
@@ -424,7 +426,8 @@ async function ensureAvd(config, meta) {
     return;
   }
   const env = { ...process.env, ANDROID_AVD_HOME: meta.avdHome, ANDROID_SDK_ROOT: config.sdkRoot, ANDROID_HOME: config.sdkRoot };
-  const args = ['create', 'avd', '--name', meta.avdName, '--package', meta.systemImage || config.systemImage, '--device', meta.deviceModelId || 'pixel_7', '--force'];
+  const pixelBase = meta.deviceModelId.startsWith('pixel_') ? meta.deviceModelId : 'pixel_7';
+  const args = ['create', 'avd', '--name', meta.avdName, '--package', meta.systemImage || config.systemImage, '--device', pixelBase, '--force'];
   const child = spawn(config.avdManager, args, { env, stdio: ['pipe', 'ignore', 'pipe'], windowsHide: true });
   let stderr = '';
   child.stderr.on('data', (chunk) => { stderr = (stderr + String(chunk)).slice(-3000); });
@@ -433,8 +436,35 @@ async function ensureAvd(config, meta) {
     child.once('error', reject);
     child.once('close', (code) => code === 0 ? resolve(true) : reject(new Error(stderr || 'avdmanager failed with exit code ' + code)));
   });
+  await applyDeviceProfile(meta);
   await verifyAvdImage(config, meta);
   return outcome;
+}
+
+const DEVICE_PROFILE_SPECS = {
+  samsung_galaxy_s22: { manufacturer: 'Samsung', name: 'Galaxy S22', width: 1080, height: 2340, density: 425 },
+  samsung_galaxy_s23: { manufacturer: 'Samsung', name: 'Galaxy S23', width: 1080, height: 2340, density: 425 },
+  samsung_galaxy_s24: { manufacturer: 'Samsung', name: 'Galaxy S24', width: 1080, height: 2340, density: 416 },
+  samsung_galaxy_s24_ultra: { manufacturer: 'Samsung', name: 'Galaxy S24 Ultra', width: 1440, height: 3120, density: 505 },
+  oppo_find_x8_pro: { manufacturer: 'OPPO', name: 'Find X8 Pro', width: 1264, height: 2780, density: 450 },
+  xiaomi_14_ultra: { manufacturer: 'Xiaomi', name: '14 Ultra', width: 1440, height: 3200, density: 522 },
+};
+
+async function applyDeviceProfile(meta) {
+  const spec = DEVICE_PROFILE_SPECS[meta.deviceModelId];
+  if (!spec) return;
+  const configPath = path.join(meta.avdHome, meta.avdName + '.avd', 'config.ini');
+  const original = await readFile(configPath, 'utf8');
+  const keys = new Set(['hw.device.manufacturer', 'hw.device.name', 'hw.lcd.width', 'hw.lcd.height', 'hw.lcd.density']);
+  const preserved = original.split(/\r?\n/).filter((line) => !keys.has(line.split('=')[0].trim()));
+  const settings = [
+    'hw.device.manufacturer=' + spec.manufacturer,
+    'hw.device.name=' + spec.name,
+    'hw.lcd.width=' + spec.width,
+    'hw.lcd.height=' + spec.height,
+    'hw.lcd.density=' + spec.density,
+  ];
+  await writeFile(configPath, preserved.filter(Boolean).concat(settings).join('\n') + '\n', 'utf8');
 }
 
 async function allocateTcpPort() {
