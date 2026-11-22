@@ -206,6 +206,13 @@ export function mountWorkspaceExperience(): void {
   if (signOut && accountSlot) accountSlot.append(signOut);
   refresh?.remove();
   toolbar?.remove();
+  const sandboxIntro = shell.querySelector<HTMLElement>('[data-page-panel="sandbox"] .grix-workspace-page-intro');
+  if (refresh && sandboxIntro) {
+    refresh.className = 'grix-workspace-button secondary';
+    refresh.textContent = 'Refresh devices';
+    refresh.setAttribute('aria-label', 'Refresh devices and Android version/model availability');
+    sandboxIntro.append(refresh);
+  }
 
   const deviceSection = shell.querySelector<HTMLElement>('#grix-workspace-device-section');
   const requestSection = shell.querySelector<HTMLElement>('#grix-workspace-request-section');
@@ -217,7 +224,7 @@ export function mountWorkspaceExperience(): void {
   const requestTitle = requestBox.querySelector('h3');
   const requestCopy = requestBox.querySelector('p');
   if (requestTitle) requestTitle.textContent = 'Create a device';
-  if (requestCopy) requestCopy.textContent = 'Choose a name and profile. We will add the request to your setup queue.';
+  if (requestCopy) requestCopy.textContent = 'Choose a name, performance profile, Android version and Pixel model. This creates a new device and leaves your existing devices unchanged.';
   const requestSubmit = requestBox.querySelector<HTMLButtonElement>('#grix-cloud-request-submit');
   if (requestSubmit) requestSubmit.textContent = 'Request device';
   const profileSelect = requestBox.querySelector<HTMLSelectElement>('#grix-cloud-profile');

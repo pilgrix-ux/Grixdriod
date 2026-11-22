@@ -60,7 +60,7 @@ A future worker should:
 6. Expose a short-lived session through an authenticated streaming gateway.
 7. On stop, checkpoint state, detach the volume and release worker capacity without deleting customer data.
 
-The worker defaults to Google's official Android 15 (API 35) `google_apis_playstore` Emulator system image. This is a genuine Android system image with the Android framework/userspace plus the Play Store and Google Play services; it is not the browser-based Dalvik HLE experiment. The worker checks the Android build fingerprint, SDK level, Settings package, and (for this target) Play Store and Play services packages before marking a device ready. Operators may explicitly choose `google_apis` or an AOSP image instead, but those targets do not promise the Play Store. Use of Google Play-enabled images for a public hosted service needs a separate review of Google's applicable terms; GRIXDroid does not copy or redistribute Google proprietary packages.
+The worker defaults to Google's official Android 15 (API 35) `google_apis_playstore` Emulator system image and Pixel 7 AVD profile. The database-backed Device Sandbox selector supports Android 12, 12L, 13, 14, 15 and 16 plus Pixel 6–9 / Pro AVD profiles, but it only displays version/model pairs advertised by a recently active worker. A selector choice is validated again by Row Level Security and the worker queue before provisioning. A worker must have each selected SDK system image and AVD model installed locally; supported choices are not silently faked or substituted. This is a genuine Android system image with the Android framework/userspace and, for the Play Store target, Google Play services; it is not the browser-based Dalvik HLE experiment. The worker checks Android build properties, Settings and the packages expected for the selected image before marking a device ready. Use of Google Play-enabled images for a public hosted service needs a separate review of Google's applicable terms; GRIXDroid does not copy or redistribute Google proprietary packages.
 
 ## Configuration
 
@@ -71,7 +71,7 @@ Copy .env.example to .env.local and set:
 
 Only the publishable key belongs in the frontend. Never set VITE_SUPABASE_SERVICE_ROLE_KEY.
 
-Apply the migration in supabase/migrations/20261119000000_grixdroid_cloud_devices.sql to a dedicated GRIXDroid Supabase project. Do not reuse a different application's project without intentionally reviewing ownership, billing and existing data.
+Apply the ordered migrations under `supabase/migrations/` to the dedicated GRIXDroid Supabase project. The latest migration, `20261122002011_grixdroid_selectable_android_targets.sql`, adds selected Android release/model metadata, a worker-capability lookup RPC, and queue/RLS validation. Do not reuse a different application's project without intentionally reviewing ownership, billing and existing data.
 
 **Data API exposure:** Supabase changed the default exposure behavior for newly created tables in 2026. If the project does not expose the public schema through its Data API, explicitly enable the public schema in the project's API settings before using this browser REST integration. The migration grants only the required table privileges and still enforces RLS.
 
@@ -93,7 +93,7 @@ The worker API is not the public customer session gateway. Keep it on loopback o
 
 ### Database setup
 
-The dedicated Supabase project is **Grix emulator**. It is active, and all six GRIXDroid migrations below are recorded in its migration history. Keep these files in sync with the database history:
+The dedicated Supabase project is **Grix emulator**. Keep the following migration files in sync with its migration history:
 
 1. `supabase/migrations/20261119175734_grixdroid_cloud_devices.sql`
 2. `supabase/migrations/20261119175837_grixdroid_worker_queue.sql`
@@ -101,6 +101,8 @@ The dedicated Supabase project is **Grix emulator**. It is active, and all six G
 4. `supabase/migrations/20261119192634_grixdroid_device_controls.sql`
 5. `supabase/migrations/20261119194619_grixdroid_apk_install_tools.sql`
 6. `supabase/migrations/20261119194706_grixdroid_apk_owner_read_policy.sql`
+7. `supabase/migrations/20261122002011_grixdroid_selectable_android_targets.sql`
+8. `supabase/migrations/20261122002238_grixdroid_capacity_aware_device_options.sql`
 
 The worker-queue migration adds service-role-only RPCs for heartbeat, atomic provisioning claims, lease renewal, completion/failure and device-state changes. The device-controls migration adds an owner-scoped command queue. The APK-install migration adds a private `grixdroid-apks` bucket (50 MB per APK), per-account folder policies, APK-install commands and a worker claim RPC that returns the owning user ID. The owner-read policy allows a signed-in user to inspect only their own APK objects. Worker RPCs remain service-role-only and are not callable by `anon` or `authenticated`.
 
@@ -123,7 +125,7 @@ Then configure the private worker:
 cp .env.worker.example .env.worker
 ```
 
-Set `SUPABASE_URL`, a server-only `SUPABASE_API_KEY` (`sb_secret_...`) and `SUPABASE_SERVICE_ROLE_JWT` (the legacy service_role JWT used for the worker RPC role claim), `GRIXDROID_WORKER_ID` (a stable UUID), `ANDROID_SDK_ROOT`, and `GRIXDROID_DATA_ROOT`. The worker sends the secret API key only through `apikey` and the JWT only through `Authorization: Bearer`. Keep `.env.worker` out of Git and never copy either value into a `VITE_` variable. A legacy-only `SUPABASE_SERVICE_ROLE_KEY` variable remains available as a temporary fallback.
+Set `SUPABASE_URL`, a server-only `SUPABASE_API_KEY` (`sb_secret_...`) and `SUPABASE_SERVICE_ROLE_JWT` (the legacy service_role JWT used for the worker RPC role claim), `GRIXDROID_WORKER_ID` (a stable UUID), `ANDROID_SDK_ROOT`, and `GRIXDROID_DATA_ROOT`. To keep the default single target, install Android 15 / Pixel 7. To offer more versions, install each additional SDK image and set `GRIXDROID_SYSTEM_IMAGES` to a comma-separated list of its exact package names. Set `GRIXDROID_DEVICE_MODELS` to the comma-separated AVD IDs installed in that SDK. For example, API 34, 35 and 36 can be enabled together with `pixel_7,pixel_8,pixel_9`; the website will display only matching combinations from a fresh worker heartbeat. The worker sends the secret API key only through `apikey` and the JWT only through `Authorization: Bearer`. Keep `.env.worker` out of Git and never copy either value into a `VITE_` variable. A legacy-only `SUPABASE_SERVICE_ROLE_KEY` variable remains available as a temporary fallback.
 
 Start it from the repository root:
 
@@ -147,7 +149,7 @@ GRIXDROID_MAX_DEVICES=1
 
 This mode is very slow and is for development experiments, not a practical multi-user production host. Hardware-accelerated Android Emulator instances use the host's supported virtualization facility (KVM on Linux, Hypervisor.Framework on macOS, or WHPX on Windows). See the [Android Emulator command-line options](https://developer.android.com/studio/run/emulator-commandline) and [acceleration guide](https://developer.android.com/studio/run/emulator-acceleration).
 
-The default worker image is `system-images;android-35;google_apis_playstore;x86_64`. The worker refuses to start if that exact SDK package is missing, and it refuses to label a boot successful unless Android's system properties and Settings package are present. For a Play Store target it also verifies `com.android.vending` and `com.google.android.gms`. To use a non-Play-Store build, set `GRIXDROID_SYSTEM_IMAGE` to the exact SDK package and install it first. Existing AVDs are checked against their configured image; changing image targets requires a new device rather than silently reusing an incompatible data disk. GRIXDroid does not bundle or redistribute Google Play or Play services.
+The default worker image is `system-images;android-35;google_apis_playstore;x86_64`. With the default `GRIXDROID_SYSTEM_IMAGE`, only Android 15 is advertised. When `GRIXDROID_SYSTEM_IMAGES` is set, the worker checks every configured package at startup and advertises only those Android releases. It also validates the configured device models against the local Android SDK device catalog. The worker refuses to label a boot successful unless Android's system properties and Settings package are present; for a Play Store target it also verifies `com.android.vending` and `com.google.android.gms`. Existing AVDs are checked against their configured image; changing image targets requires a new device rather than silently reusing an incompatible data disk. GRIXDroid does not bundle or redistribute Google Play or Play services.
 
 ### Worker API
 
@@ -174,10 +176,10 @@ The worker is currently a single-host development provider. The WHIP/WHEP integr
 
 This is the control-plane/data-model foundation, not an Appetize.io replacement yet:
 
-- No persistent Android worker is enrolled.
+- No persistent Android worker is currently enrolled in the connected backend. The selector is therefore expected to show no choices until an operator starts a configured worker.
 - No device image is being launched for a customer.
 - No MediaMTX gateway or worker host is deployed; the repository contains an optional WHIP/WHEP streaming integration that still needs host configuration.
 - No public network egress/IP isolation is provisioned yet.
 - No Google Play packages are redistributed by GRIXDroid.
 
-The database and four migrations are already in place. The next deployment milestone is to enroll a persistent Android worker on a durable host, configure the MediaMTX gateway and Vercel frontend variables, then verify real Android boot, touch control, persistent stop/start and end-to-end WebRTC playback.
+The database and eight migrations are already in place, including the Android target-selection migration. The next deployment milestone is to enroll a persistent Android worker on a durable host, install the Android versions and device profiles to be offered, configure the MediaMTX gateway and Vercel frontend variables, then verify real Android boot, touch control, persistent stop/start and end-to-end WebRTC playback.

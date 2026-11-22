@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import os from 'node:os';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { getWorkerConfig, parseResolution, parseSystemImagePackage, resolveAvdManagerPath, validateAction } from './cloud-worker.mjs';
+import { androidVersionForApiLevel, getWorkerConfig, parseResolution, parseSystemImagePackage, resolveAvdManagerPath, validateAction } from './cloud-worker.mjs';
 
 test('normalizes tap coordinates without accepting values outside the screen', () => {
   assert.deepEqual(validateAction({ type: 'tap', x: 0.5, y: 0.25 }), { type: 'tap', x: 0.5, y: 0.25 });
@@ -70,6 +70,16 @@ test('reads the final active display resolution from adb output', () => {
   assert.deepEqual(parseResolution('unknown'), { width: 0, height: 0 });
 });
 
+test('maps Android API levels to selectable Android releases', () => {
+  assert.equal(androidVersionForApiLevel(31), '12');
+  assert.equal(androidVersionForApiLevel(32), '12L');
+  assert.equal(androidVersionForApiLevel(33), '13');
+  assert.equal(androidVersionForApiLevel(34), '14');
+  assert.equal(androidVersionForApiLevel(35), '15');
+  assert.equal(androidVersionForApiLevel(36), '16');
+  assert.throws(() => androidVersionForApiLevel(37), /supported GRIXDroid range/);
+});
+
 test('parses the official Google Play Android Emulator system image', () => {
   assert.deepEqual(parseSystemImagePackage('system-images;android-35;google_apis_playstore;x86_64'), {
     apiLevel: 35,
@@ -94,6 +104,23 @@ test('worker config clamps capacity and keeps its API loopback-only by default',
   assert.equal(config.dataRoot, path.resolve('/var/lib/grixdroid'));
   assert.match(config.adb, /platform-tools/);
   assert.equal(config.systemImage, 'system-images;android-35;google_apis_playstore;x86_64');
+  assert.deepEqual(config.systemImages.map((image) => image.androidVersion), ['15']);
+  assert.deepEqual(config.deviceModels, ['pixel_7']);
+});
+
+test('worker config exposes only the Android images and device models installed by its operator', () => {
+  const config = getWorkerConfig({
+    GRIXDROID_SYSTEM_IMAGES: [
+      'system-images;android-34;google_apis_playstore;x86_64',
+      'system-images;android-35;google_apis_playstore;x86_64',
+      'system-images;android-36;google_apis_playstore;x86_64',
+    ].join(','),
+    GRIXDROID_DEVICE_MODELS: 'pixel_7,pixel_8,pixel_9',
+  });
+  assert.deepEqual(config.systemImages.map((image) => image.androidVersion), ['14', '15', '16']);
+  assert.deepEqual(config.deviceModels, ['pixel_7', 'pixel_8', 'pixel_9']);
+  assert.throws(() => getWorkerConfig({ GRIXDROID_SYSTEM_IMAGES: 'system-images;android-37;google_apis;x86_64' }), /supported GRIXDroid range/);
+  assert.throws(() => getWorkerConfig({ GRIXDROID_DEVICE_MODELS: 'pixel_7; rm -rf' }), /supported Pixel AVD IDs/);
 });
 
 test('finds avdmanager in versioned Android SDK command-line tools directories', () => {

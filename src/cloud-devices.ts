@@ -24,8 +24,19 @@ type DeviceRequest = {
   id: string;
   name: string;
   profile: 'compact' | 'standard';
+  android_version: string;
+  device_model: string;
   status: 'queued' | 'claimed' | 'starting' | 'fulfilled' | 'failed' | 'cancelled';
   created_at: string;
+};
+
+type DeviceTarget = {
+  android_version: string;
+  device_model: string;
+};
+
+type DeviceOptionsResponse = {
+  targets?: DeviceTarget[];
 };
 
 type CloudDevice = {
@@ -33,6 +44,7 @@ type CloudDevice = {
   name: string;
   profile: 'compact' | 'standard';
   android_release: string | null;
+  device_model: string;
   state: 'provisioning' | 'stopped' | 'starting' | 'running' | 'stopping' | 'error' | 'deleting';
   storage_state: 'pending' | 'attached' | 'snapshotting' | 'error';
   storage_bytes: number;
@@ -49,6 +61,25 @@ type CloudDeviceAction = {
 const DEFAULT_SUPABASE_PROJECT_REF = 'olbqxgnhozafcckcoapx';
 const DEFAULT_SUPABASE_URL = 'https://olbqxgnhozafcckcoapx.supabase.co';
 const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_2SBpc33fTryZKwaSc6pl2w_yDZBJ22U';
+const ANDROID_VERSION_LABELS: Record<string, string> = {
+  '12': 'Android 12',
+  '12L': 'Android 12L',
+  '13': 'Android 13',
+  '14': 'Android 14',
+  '15': 'Android 15',
+  '16': 'Android 16',
+};
+const DEVICE_MODEL_LABELS: Record<string, string> = {
+  pixel_6: 'Google Pixel 6',
+  pixel_6_pro: 'Google Pixel 6 Pro',
+  pixel_7: 'Google Pixel 7',
+  pixel_7_pro: 'Google Pixel 7 Pro',
+  pixel_8: 'Google Pixel 8',
+  pixel_8_pro: 'Google Pixel 8 Pro',
+  pixel_9: 'Google Pixel 9',
+  pixel_9_pro: 'Google Pixel 9 Pro',
+};
+
 const GOOGLE_ICON_MARKUP = '<svg class="grix-cloud-google-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.74 7.18l7.73 6c4.51-4.18 7.05-10.33 7.05-17.65z"/><path fill="#34A853" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.75-4.59l-7.98-6.19C.91 16.67 0 20.21 0 24s.91 7.33 2.52 10.78l8.01-6.19z"/><path fill="#FBBC05" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.9 2.3-8.18 2.3-6.26 0-11.57-4.22-13.46-9.91l-8.01 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
 
 function normalizeSupabaseUrl(value: string): string | null {
@@ -123,8 +154,11 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '  <div class="grix-cloud-request-box"><div><h3>Request an Android device</h3><p>Add a device to your workspace with a profile that fits your needs.</p></div>',
     '    <form id="grix-cloud-request-form" class="grix-cloud-request-form">',
     '      <label>Device name<input id="grix-cloud-device-name" type="text" required minlength="2" maxlength="40" placeholder="My Android"></label>',
-    '      <label>Device profile<select id="grix-cloud-profile"><option value="compact">Compact · lower resource profile</option><option value="standard" selected>Standard · balanced profile</option></select></label>',
-    '      <button class="grix-cloud-primary" id="grix-cloud-request-submit" type="submit">Submit request</button>',
+    '      <label>Device profile<select id="grix-cloud-profile"><option value="compact">Lightweight</option><option value="standard" selected>Balanced</option></select></label>',
+    '      <label>Android version<select id="grix-cloud-android-version" required><option value="">Checking worker options…</option></select></label>',
+    '      <label>Device model<select id="grix-cloud-device-model" required><option value="">Checking worker options…</option></select></label>',
+    '      <button class="grix-cloud-primary" id="grix-cloud-request-submit" type="submit" disabled>Request device</button>',
+    '      <p class="grix-cloud-target-status" id="grix-cloud-target-status" role="status">Checking connected Android workers…</p>',
     '    </form>',
     '  </div>',
     '  <div class="grix-cloud-section-heading"><div><h3>Provisioning requests</h3><p>Requests stay attached to your account.</p></div></div>',
@@ -171,6 +205,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     '        <dl>',
     '          <div><dt>Virtual device</dt><dd id="grix-cloud-detail-device">No device selected</dd></div>',
     '          <div><dt>Android version</dt><dd id="grix-cloud-detail-android">Not reported</dd></div>',
+    '          <div><dt>Device model</dt><dd id="grix-cloud-detail-model">Not reported</dd></div>',
     '          <div><dt>Profile</dt><dd id="grix-cloud-detail-profile">—</dd></div>',
     '          <div><dt>Device state</dt><dd id="grix-cloud-detail-state">Waiting</dd></div>',
     '          <div><dt>Stream</dt><dd id="grix-cloud-detail-stream">WebRTC</dd></div>',
@@ -222,6 +257,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   let fontScaleIndex = 0;
   let authSession: AuthSession | null = null;
   let busy = false;
+  let availableTargets: DeviceTarget[] = [];
 
   function setNotice(message: string, kind: 'info' | 'success' | 'error' = 'info'): void {
     notice.textContent = message;
@@ -301,6 +337,9 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     get<HTMLElement>('#grix-cloud-viewer-menu').setAttribute('aria-expanded', 'true');
     get<HTMLElement>('#grix-cloud-detail-device').textContent = 'Cloud Android · ' + device.name;
     get<HTMLElement>('#grix-cloud-detail-android').textContent = device.android_release ? 'Android ' + device.android_release : 'Not reported';
+    get<HTMLElement>('#grix-cloud-detail-model').textContent = device.device_model
+      ? (DEVICE_MODEL_LABELS[device.device_model] || device.device_model.replace(/_/g, ' '))
+      : 'Not reported';
     get<HTMLElement>('#grix-cloud-detail-profile').textContent = device.profile;
     get<HTMLElement>('#grix-cloud-detail-state').textContent = device.state;
     get<HTMLElement>('#grix-cloud-detail-stream').textContent = device.stream_state;
@@ -702,6 +741,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       if (!acceptSession(payload)) throw new Error('No session was returned.');
       setSignedIn(payload.user?.email || authSession?.email);
       setNotice('Google sign-in successful. Loading your workspace…', 'success');
+      await loadDeviceOptions();
       await reload();
       window.dispatchEvent(new CustomEvent('grixdroid:workspace-ready'));
       setNotice('You are signed in with Google. Your private workspace is ready.', 'success');
@@ -776,7 +816,9 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       name.textContent = device.name;
       top.append(name, makeStatus(device.state));
       const meta = document.createElement('p');
-      meta.textContent = (device.android_release || 'Android release not reported') + ' · ' + device.profile + ' profile';
+      const modelLabel = DEVICE_MODEL_LABELS[device.device_model] || device.device_model || 'Device model not reported';
+      meta.textContent = (device.android_release ? 'Android ' + device.android_release : 'Android release not reported')
+        + ' · ' + modelLabel + ' · ' + device.profile + ' profile';
       const storage = document.createElement('p');
       const bytes = Number(device.storage_bytes) || 0;
       storage.textContent = 'Persistent data volume · ' + (device.storage_state || 'pending') + ' · ' + (bytes > 0 ? (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB reported' : 'size not reported');
@@ -817,7 +859,9 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       name.textContent = item.name;
       top.append(name, makeStatus(item.status));
       const detail = document.createElement('p');
-      detail.textContent = item.profile + ' profile · Requested ' + new Date(item.created_at).toLocaleString();
+      const versionLabel = ANDROID_VERSION_LABELS[item.android_version] || ('Android ' + item.android_version);
+      const modelLabel = DEVICE_MODEL_LABELS[item.device_model] || item.device_model.replace(/_/g, ' ');
+      detail.textContent = versionLabel + ' · ' + modelLabel + ' · ' + item.profile + ' profile · Requested ' + new Date(item.created_at).toLocaleString();
       card.append(top, detail);
       if (item.status === 'failed') {
         const reason = document.createElement('p');
@@ -849,11 +893,86 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     requestList.replaceChildren(fragment);
   }
 
+  function renderDeviceTargetOptions(): void {
+    const versionSelect = get<HTMLSelectElement>('#grix-cloud-android-version');
+    const modelSelect = get<HTMLSelectElement>('#grix-cloud-device-model');
+    const targetStatus = get<HTMLElement>('#grix-cloud-target-status');
+    const previousVersion = versionSelect.value;
+    const order = ['12', '12L', '13', '14', '15', '16'];
+    const versions = [...new Set(availableTargets.map((target) => target.android_version))]
+      .sort((a, b) => order.indexOf(a) - order.indexOf(b));
+
+    versionSelect.replaceChildren();
+    if (!versions.length) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'No worker available';
+      versionSelect.append(option);
+      modelSelect.replaceChildren();
+      const modelOption = document.createElement('option');
+      modelOption.value = '';
+      modelOption.textContent = 'No worker available';
+      modelSelect.append(modelOption);
+      versionSelect.disabled = true;
+      modelSelect.disabled = true;
+      targetStatus.textContent = 'No Android worker is online. Android versions and device models will appear here when a compatible worker connects.';
+      requestSubmit.disabled = true;
+      return;
+    }
+
+    for (const version of versions) {
+      const option = document.createElement('option');
+      option.value = version;
+      option.textContent = ANDROID_VERSION_LABELS[version] || ('Android ' + version);
+      versionSelect.append(option);
+    }
+    versionSelect.value = versions.includes(previousVersion) ? previousVersion : versions[0];
+    versionSelect.disabled = false;
+
+    const previousModel = modelSelect.value;
+    const models = [...new Set(availableTargets
+      .filter((target) => target.android_version === versionSelect.value)
+      .map((target) => target.device_model))].sort();
+    modelSelect.replaceChildren();
+    for (const model of models) {
+      const option = document.createElement('option');
+      option.value = model;
+      option.textContent = DEVICE_MODEL_LABELS[model] || model.replace(/_/g, ' ');
+      modelSelect.append(option);
+    }
+    modelSelect.value = models.includes(previousModel) ? previousModel : (models[0] || '');
+    modelSelect.disabled = models.length === 0;
+    targetStatus.textContent = 'Options are limited to Android images and device profiles installed on an online GRIXDroid worker.';
+    requestSubmit.disabled = busy || !availableTargets.some((target) =>
+      target.android_version === versionSelect.value && target.device_model === modelSelect.value);
+  }
+
+  async function loadDeviceOptions(): Promise<void> {
+    if (!authSession) return;
+    const targetStatus = get<HTMLElement>('#grix-cloud-target-status');
+    targetStatus.textContent = 'Checking connected Android workers…';
+    try {
+      const response = await restRequest<DeviceOptionsResponse>('/rpc/grixdroid_get_device_options', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      availableTargets = Array.isArray(response?.targets)
+        ? response.targets.filter((target) =>
+          typeof target.android_version === 'string' && typeof target.device_model === 'string')
+        : [];
+      renderDeviceTargetOptions();
+    } catch {
+      availableTargets = [];
+      renderDeviceTargetOptions();
+      targetStatus.textContent = 'Could not read worker capabilities. Refresh the workspace and try again.';
+    }
+  }
+
   async function reload(): Promise<void> {
     if (!authSession) return;
     const [devices, requests] = await Promise.all([
-      restRequest<CloudDevice[]>('/cloud_devices?select=id,name,profile,android_release,state,storage_state,storage_bytes,stream_state,created_at&order=created_at.desc'),
-      restRequest<DeviceRequest[]>('/cloud_device_requests?select=id,name,profile,status,created_at&order=created_at.desc'),
+      restRequest<CloudDevice[]>('/cloud_devices?select=id,name,profile,android_release,device_model,state,storage_state,storage_bytes,stream_state,created_at&order=created_at.desc'),
+      restRequest<DeviceRequest[]>('/cloud_device_requests?select=id,name,profile,android_version,device_model,status,created_at&order=created_at.desc'),
     ]);
     renderDevices(devices);
     renderRequests(requests);
@@ -867,6 +986,8 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   }
 
   googleButton.addEventListener('click', () => { void beginGoogleSignIn(); });
+  get<HTMLSelectElement>('#grix-cloud-android-version').addEventListener('change', renderDeviceTargetOptions);
+  get<HTMLSelectElement>('#grix-cloud-device-model').addEventListener('change', renderDeviceTargetOptions);
 
   requestForm.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -874,7 +995,12 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     const nameInput = get<HTMLInputElement>('#grix-cloud-device-name');
     const name = nameInput.value.trim();
     const profile = get<HTMLSelectElement>('#grix-cloud-profile').value;
+    const androidVersion = get<HTMLSelectElement>('#grix-cloud-android-version').value;
+    const deviceModel = get<HTMLSelectElement>('#grix-cloud-device-model').value;
+    const targetIsAvailable = availableTargets.some((target) =>
+      target.android_version === androidVersion && target.device_model === deviceModel);
     if (name.length < 2 || name.length > 40) return setNotice('Device names must contain 2–40 characters.', 'error');
+    if (!targetIsAvailable) return setNotice('Choose an Android version and device model supported by an online worker.', 'error');
     busy = true;
     requestSubmit.disabled = true;
     setNotice('Submitting your provisioning request…');
@@ -882,7 +1008,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       await restRequest<DeviceRequest[]>('/cloud_device_requests', {
         method: 'POST',
         headers: { Prefer: 'return=representation' },
-        body: JSON.stringify({ name, profile }),
+        body: JSON.stringify({ name, profile, android_version: androidVersion, device_model: deviceModel }),
       });
       nameInput.value = '';
       await reload();
@@ -892,12 +1018,13 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       setNotice(userFacingError(error, 'Unable to submit the provisioning request.'), 'error');
     } finally {
       busy = false;
-      requestSubmit.disabled = false;
+      renderDeviceTargetOptions();
     }
   });
 
   get<HTMLButtonElement>('#grix-cloud-refresh').addEventListener('click', async () => {
     try {
+      await loadDeviceOptions();
       await reload();
       window.dispatchEvent(new CustomEvent('grixdroid:workspace-ready'));
       setNotice('Device information refreshed.', 'success');
@@ -1067,6 +1194,8 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     await closeViewer();
     const current = authSession;
     authSession = null;
+    availableTargets = [];
+    renderDeviceTargetOptions();
     try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch { /* Ignore unavailable storage. */ }
     setSignedIn(undefined);
     addEmpty(deviceList, 'Sign in to view your cloud devices.');
@@ -1113,6 +1242,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
       if (restoredSession.expires_at * 1000 - Date.now() < 60_000) {
         if (!(await refreshSession()) || !authSession) throw new Error('Session expired.');
       }
+      await loadDeviceOptions();
       await reload();
       window.dispatchEvent(new CustomEvent('grixdroid:workspace-ready'));
       setNotice('Your private workspace is ready.', 'success');

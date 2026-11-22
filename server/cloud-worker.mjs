@@ -89,6 +89,13 @@ export function parseSystemImagePackage(raw) {
   };
 }
 
+export function androidVersionForApiLevel(apiLevel) {
+  const versions = new Map([[31, '12'], [32, '12L'], [33, '13'], [34, '14'], [35, '15'], [36, '16']]);
+  const version = versions.get(Number(apiLevel));
+  if (!version) throw new Error('Android API level ' + apiLevel + ' is not in the supported GRIXDroid range (31–36).');
+  return version;
+}
+
 export function resolveAvdManagerPath(sdkRoot, override = '', platform = process.platform) {
   if (override) return override;
   if (!sdkRoot) return 'avdmanager';
@@ -128,6 +135,29 @@ export function getWorkerConfig(env = process.env) {
   if (!['auto', 'on', 'off'].includes(accel)) throw new Error('GRIXDROID_ACCEL must be auto, on or off.');
   const capacity = Math.max(1, Math.min(4, Number(env.GRIXDROID_MAX_DEVICES) || 1));
   const systemImage = env.GRIXDROID_SYSTEM_IMAGE || 'system-images;android-35;google_apis_playstore;x86_64';
+  const systemImagePackages = (env.GRIXDROID_SYSTEM_IMAGES || systemImage)
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const systemImages = systemImagePackages.map((packageName) => {
+    const parsed = parseSystemImagePackage(packageName);
+    return { package: packageName, ...parsed, androidVersion: androidVersionForApiLevel(parsed.apiLevel) };
+  });
+  if (!systemImages.length || new Set(systemImages.map((image) => image.androidVersion)).size !== systemImages.length) {
+    throw new Error('GRIXDROID_SYSTEM_IMAGES must contain one supported system image per Android version.');
+  }
+  const deviceModels = (env.GRIXDROID_DEVICE_MODELS || 'pixel_7')
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  const supportedDeviceModels = new Set([
+    'pixel_6', 'pixel_6_pro', 'pixel_7', 'pixel_7_pro',
+    'pixel_8', 'pixel_8_pro', 'pixel_9', 'pixel_9_pro',
+  ]);
+  if (!deviceModels.length || deviceModels.some((model) => !supportedDeviceModels.has(model)) ||
+      new Set(deviceModels).size !== deviceModels.length) {
+    throw new Error('GRIXDROID_DEVICE_MODELS must contain unique supported Pixel AVD IDs (pixel_6 through pixel_9, including Pro variants).');
+  }
   return {
     sdkRoot,
     dataRoot: root,
@@ -136,6 +166,8 @@ export function getWorkerConfig(env = process.env) {
     emulator: env.EMULATOR_PATH || (sdkRoot ? path.join(sdkRoot, 'emulator', process.platform === 'win32' ? 'emulator.exe' : 'emulator') : 'emulator'),
     avdManager: resolveAvdManagerPath(sdkRoot, env.AVDMANAGER_PATH || ''),
     systemImage,
+    systemImages,
+    deviceModels,
     scrcpyServerPath: env.SCRCPY_SERVER_PATH || '',
     scrcpyVersion: env.SCRCPY_VERSION || '',
     ffmpeg: env.FFMPEG_PATH || 'ffmpeg',
@@ -311,7 +343,7 @@ async function adb(config, serial, args, options = {}) {
   return run(config.adb, ['-s', serial, ...args], options);
 }
 
-async function inspectAndroidSystem(config, serial) {
+async function inspectAndroidSystem(config, serial, systemImagePackage = config.systemImage) {
   const readProperty = async (name) => String((await adb(config, serial, ['shell', 'getprop', name])).stdout).trim();
   const androidRelease = await readProperty('ro.build.version.release');
   const androidSdk = Number.parseInt(await readProperty('ro.build.version.sdk'), 10);
@@ -322,7 +354,7 @@ async function inspectAndroidSystem(config, serial) {
     throw new Error('The booted image did not pass Android framework verification (build properties or Settings package missing).');
   }
 
-  const image = parseSystemImagePackage(config.systemImage);
+  const image = parseSystemImagePackage(systemImagePackage);
   const playStore = String((await adb(config, serial, ['shell', 'pm', 'path', 'com.android.vending'])).stdout).trim();
   const playServices = String((await adb(config, serial, ['shell', 'pm', 'path', 'com.google.android.gms'])).stdout).trim();
   if (image.hasPlayStore && (!playStore || !playServices)) {
@@ -347,7 +379,7 @@ async function waitForBoot(config, meta) {
     if (meta.process && meta.process.exitCode !== null) throw new Error(meta.lastError || 'Emulator exited before Android boot completed.');
     const result = await adb(config, meta.serial, ['shell', 'getprop', 'sys.boot_completed']).catch(() => ({ stdout: '' }));
     if (String(result.stdout).trim() === '1') {
-      const system = await inspectAndroidSystem(config, meta.serial);
+      const system = await inspectAndroidSystem(config, meta.serial, meta.systemImage || config.systemImage);
       const size = await adb(config, meta.serial, ['shell', 'wm', 'size']).catch(() => ({ stdout: '' }));
       return { ...system, resolution: parseResolution(size.stdout) };
     }
@@ -362,18 +394,18 @@ async function listAvds(config, avdHome) {
   return String(result.stdout).split(/\r?\n/).map((v) => v.trim()).filter(Boolean);
 }
 
-async function assertSystemImageInstalled(config) {
-  const image = parseSystemImagePackage(config.systemImage);
+async function assertSystemImageInstalled(config, systemImagePackage = config.systemImage) {
+  const image = parseSystemImagePackage(systemImagePackage);
   const imageDir = path.join(config.sdkRoot, image.relativePath);
   const entries = await readdir(imageDir).catch(() => null);
   if (!entries || (!entries.includes('source.properties') && !entries.includes('package.xml'))) {
-    throw new Error('Android system image is not installed: ' + config.systemImage + '. Install it with sdkmanager before starting the worker.');
+    throw new Error('Android system image is not installed: ' + systemImagePackage + '. Install it with sdkmanager before starting the worker.');
   }
   return image;
 }
 
 async function verifyAvdImage(config, meta) {
-  const image = parseSystemImagePackage(config.systemImage);
+  const image = parseSystemImagePackage(meta.systemImage || config.systemImage);
   const configFile = path.join(meta.avdHome, meta.avdName + '.avd', 'config.ini');
   const avdConfig = await readFile(configFile, 'utf8');
   const match = avdConfig.match(/^image\.sysdir\.1=(.+)$/m);
@@ -392,7 +424,7 @@ async function ensureAvd(config, meta) {
     return;
   }
   const env = { ...process.env, ANDROID_AVD_HOME: meta.avdHome, ANDROID_SDK_ROOT: config.sdkRoot, ANDROID_HOME: config.sdkRoot };
-  const args = ['create', 'avd', '--name', meta.avdName, '--package', config.systemImage, '--device', 'pixel_7', '--force'];
+  const args = ['create', 'avd', '--name', meta.avdName, '--package', meta.systemImage || config.systemImage, '--device', meta.deviceModelId || 'pixel_7', '--force'];
   const child = spawn(config.avdManager, args, { env, stdio: ['pipe', 'ignore', 'pipe'], windowsHide: true });
   let stderr = '';
   child.stderr.on('data', (chunk) => { stderr = (stderr + String(chunk)).slice(-3000); });
@@ -515,6 +547,8 @@ async function persistMeta(meta) {
     requestId: meta.requestId,
     name: meta.name,
     profile: meta.profile,
+    systemImage: meta.systemImage || config.systemImage,
+    deviceModelId: meta.deviceModelId || 'pixel_7',
     avdName: meta.avdName,
     avdHome: meta.avdHome,
     deviceDir: meta.deviceDir,
@@ -779,6 +813,8 @@ async function bootClaim(config, claim, instances) {
       cloudDeviceId: '',
       name: claim.device_name,
       profile: claim.profile,
+      systemImage: (config.systemImages.find((image) => image.androidVersion === String(claim.android_version)) || {}).package,
+      deviceModelId: String(claim.device_model || ''),
       avdName,
       avdHome,
       deviceDir,
@@ -790,6 +826,9 @@ async function bootClaim(config, claim, instances) {
       expectedStop: false,
       lastLog: '',
     };
+    if (!meta.systemImage) throw new Error('This worker does not have Android ' + claim.android_version + ' installed and enabled.');
+    if (!config.deviceModels.includes(meta.deviceModelId)) throw new Error('This worker does not support the requested device model.');
+    await assertSystemImageInstalled(config, meta.systemImage);
     await mkdir(deviceDir, { recursive: true });
     await ensureAvd(config, meta);
     spawnEmulator(config, meta);
@@ -800,6 +839,7 @@ async function bootClaim(config, claim, instances) {
       p_worker_id: config.workerId,
       p_lease_token: leaseToken,
       p_android_release: meta.androidRelease,
+      p_device_model: meta.deviceModelId,
       p_runtime_handle: avdName,
       p_persistent_volume_ref: deviceDir,
       p_storage_bytes: 0,
@@ -844,6 +884,13 @@ async function heartbeatAndClaim(config, instances) {
     p_capabilities: {
       provider: 'android-emulator',
       system_image: config.systemImage,
+      system_images: config.systemImages.map((image) => ({
+        android_version: image.androidVersion,
+        api_level: image.apiLevel,
+        package: image.package,
+        has_play_store: image.hasPlayStore,
+      })),
+      device_models: config.deviceModels,
       acceleration: config.accel,
       gpu: config.gpu,
       persistent_data: true,
@@ -936,12 +983,18 @@ export async function startCloudWorker(config = getWorkerConfig()) {
     if (!String(help.stdout).toLowerCase().includes('authorization')) throw new Error('The installed FFmpeg build must include the WHIP muxer with its authorization option.');
   }
 
-  const image = await assertSystemImageInstalled(config);
+  for (const image of config.systemImages) {
+    await assertSystemImageInstalled(config, image.package);
+  }
   await run(config.emulator, ['-version']);
   try {
-    // avdmanager has no top-level --version flag. Use its supported list
-    // subcommand as a non-destructive executable/SDK-tools health check.
+    // avdmanager has no top-level --version flag. Use supported list
+    // subcommands as non-destructive executable/SDK-tools health checks.
     await run(config.avdManager, ['list', 'avd']);
+    const deviceCatalog = await run(config.avdManager, ['list', 'device', '-c']);
+    const availableModels = new Set(String(deviceCatalog.stdout).split(/\r?\n/).map((value) => value.trim()).filter(Boolean));
+    const missingModels = config.deviceModels.filter((model) => !availableModels.has(model));
+    if (missingModels.length) throw new Error('Android SDK does not contain device model(s): ' + missingModels.join(', '));
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error('Could not execute Android SDK avdmanager (' + config.avdManager + '): ' + detail + '. Install Android SDK Command-line Tools and ensure avdmanager is on PATH.');
