@@ -27,6 +27,8 @@ If the host provider does not expose KVM, do not expect ten software-emulated AV
 ```bash
 sudo useradd --system --create-home --home-dir /var/lib/grixdroid/home --shell /usr/sbin/nologin grixdroid
 sudo usermod -aG kvm grixdroid
+# For a physical USB handset, add the service account to the host's Android USB/plugdev group when present.
+getent group plugdev && sudo usermod -aG plugdev grixdroid || true
 sudo install -d -o root -g grixdroid -m 0750 /etc/grixdroid
 
 sudo git clone https://github.com/pilgrix-ux/Grixdriod.git /opt/grixdroid
