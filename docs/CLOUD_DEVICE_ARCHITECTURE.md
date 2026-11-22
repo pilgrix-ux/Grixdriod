@@ -181,4 +181,4 @@ This is the control-plane/data-model foundation, not an Appetize.io replacement 
 - No public network egress/IP isolation is provisioned yet.
 - No Google Play packages are redistributed by GRIXDroid.
 
-The database and four migrations are already in place. The next deployment milestone is to enroll a persistent Android worker on a durable host, configure the MediaMTX gateway and Vercel frontend variables, then verify real Android boot, touch control, persistent stop/start and end-to-end WebRTC playback.
+The database and seven migrations are already in place, including the Android target-selection migration. The next deployment milestone is to enroll a persistent Android worker on a durable host, install the Android versions and device profiles to be offered, configure the MediaMTX gateway and Vercel frontend variables, then verify real Android boot, touch control, persistent stop/start and end-to-end WebRTC playback.
