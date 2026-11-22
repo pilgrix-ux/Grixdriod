@@ -700,7 +700,9 @@ async function processActions(config, current) {
     let success = false;
     let reason = '';
     try {
-      if (action.device_id !== current.cloudDeviceId) throw new Error('This worker does not own the active session for that device.');
+      if (action.device_id !== current.cloudDeviceId || action.user_id !== current.userId) {
+        throw new Error('Input action owner does not match the active physical-device session.');
+      }
       await executeAction(config, current, action.command, action.user_id, action.device_id);
       current.lastActivityAt = Date.now();
       await touchSession(config, current);
