@@ -260,9 +260,9 @@ async function callRpc(config, name, args) {
   try { return JSON.parse(text); } catch { return text; }
 }
 
-function profileSettings(profile) {
+export function profileSettings(profile) {
   return profile === 'compact'
-    ? { memory: 1536, cores: 1, resolution: '720x1280' }
+    ? { memory: 1536, cores: 1, resolution: '720x1600' }
     : { memory: 2048, cores: 2, resolution: '720x1280' };
 }
 
@@ -675,6 +675,7 @@ async function executeAction(config, meta, action, context = {}) {
   } else if (normalized.type === 'resolution') {
     await adb(config, meta.serial, ['shell', 'wm', 'size', normalized.width + 'x' + normalized.height]);
     meta.resolution = { width: normalized.width, height: normalized.height };
+    await persistMeta(meta);
   } else if (normalized.type === 'fingerprint') {
     await run(config.adb, ['-s', meta.serial, 'emu', 'finger', 'touch', '1']);
   } else if (normalized.type === 'install_apk') {
@@ -823,6 +824,13 @@ async function bootClaim(config, claim, instances) {
     spawnEmulator(config, meta);
     const boot = await waitForBoot(config, meta);
     Object.assign(meta, boot);
+    // Start every newly provisioned device at the free 720p preset shown in the viewer.
+    await adb(config, meta.serial, ['shell', 'wm', 'size', settings.resolution]);
+    const appliedSize = await adb(config, meta.serial, ['shell', 'wm', 'size']);
+    meta.resolution = parseResolution(appliedSize.stdout);
+    if (meta.resolution.width !== 720 || meta.resolution.height !== 1600) {
+      throw new Error('Could not apply the default free 720p Android display size.');
+    }
     const deviceId = await callRpc(config, 'grixdroid_complete_device_request', {
       p_request_id: requestId,
       p_worker_id: config.workerId,
