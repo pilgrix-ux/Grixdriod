@@ -263,7 +263,7 @@ async function callRpc(config, name, args) {
 export function profileSettings(profile) {
   return profile === 'compact'
     ? { memory: 1536, cores: 1, resolution: '720x1600' }
-    : { memory: 2048, cores: 2, resolution: '720x1280' };
+    : { memory: 2048, cores: 2, resolution: '720x1600' };
 }
 
 function spawnEmulator(config, meta) {
