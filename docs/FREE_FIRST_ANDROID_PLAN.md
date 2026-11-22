@@ -92,9 +92,20 @@ Before opening public sessions, implement per-user authorization, isolation, quo
 - [x] Add RLS policies that prevent browser users from changing runtime state or reading another user's devices.
 - [x] Keep worker identifiers, runtime handles and persistent-volume references in a private schema.
 - [x] Add a build-and-test workflow for the browser/Wasm application and Rust library.
-- [ ] Configure a dedicated GRIXDroid Supabase project and apply the migration.
-- [ ] Implement the authenticated worker claim/heartbeat API.
-- [ ] Enroll a persistent Android worker and verify that a device volume survives stop/start.
-- [ ] Add a short-lived, authenticated WebRTC streaming gateway and network isolation.
+- [x] Configure the dedicated GRIXDroid Supabase project and apply the original six cloud-device migrations.
+- [x] Implement the server-side worker claim, lease, heartbeat, completion and failure RPC flow.
+- [x] Add the Android worker process, per-device AVD directories, persistent device metadata, and stop/start lifecycle.
+- [ ] Apply the new display-resolution action migration: `supabase/migrations/20261122010000_grixdroid_display_resolution_actions.sql`.
+- [ ] Enroll a persistent Android worker and verify a customer device volume survives a worker-process restart on durable storage.
+- [ ] Deploy and verify an authenticated WebRTC streaming gateway and network isolation.
 
-The Cloud Devices page records account ownership and provisioning intent. Until the worker and control-plane API are connected, requests remain queued; the page does not claim to launch an Android device.
+## Display quality foundation
+
+- [x] Provide 180p, 360p, 480p and 720p display presets; 720p is the free default for newly provisioned devices.
+- [x] Keep 180p available as a data-saving option.
+- [x] Keep 1080p disabled until paid-plan entitlement checks exist.
+- [x] Set the scrcpy long-edge ceiling to 1600 pixels so it does not pre-limit the 720×1600 portrait preset.
+- [ ] Verify actual browser stream dimensions and bitrate against a running WebRTC gateway.
+- [ ] Apply the new database migration before using the resolution selector with the live Supabase project.
+
+The Cloud Devices page records account ownership and provisioning intent. The worker code can claim requests and manage Android devices when an enrolled host is running, but no persistent customer worker or public streaming gateway is currently deployed. A queued request is not yet a running cloud device.
