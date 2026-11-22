@@ -22,6 +22,21 @@ id grixdroid
 
 If the host provider does not expose KVM, do not expect ten software-emulated AVDs to be usable. Choose a virtualization-capable VM or use the temporary macOS GitHub Actions smoke workflow only for CI verification.
 
+## Obtaining a cloud KVM host
+
+If there is no existing Linux x86 machine with KVM, Google Compute Engine supports **nested virtualization** on eligible Linux VMs. The VM must be created with nested virtualization enabled; merely creating an ordinary VM does not expose `/dev/kvm`.
+
+Important limits from Google's current support matrix:
+- The L1 VM must use a supported x86 CPU/platform. E2 and ARM instances are not supported; most AMD-backed instances are unsupported except N4D. Most memory-optimised families are excluded, with M4/M4N exceptions.
+- Linux KVM is the supported nested hypervisor.
+- Nested guests can be 10% or more slower for CPU-bound workloads, and may have higher I/O overhead.
+
+This is a **paid cloud VM**, not a free KVM endpoint. Do not create it or enable billing without the Google Cloud account owner/parent or guardian approving the project and expected spend. Choose the machine series and zone only after checking the live nested-virtualization support matrix. Once the VM exists, verify `/dev/kvm` using the checks above before starting any Android Emulator worker.
+
+Official references:
+- [Compute Engine nested virtualization overview and restrictions](https://docs.cloud.google.com/compute/docs/instances/nested-virtualization/overview)
+- [Enable nested virtualization on a Compute Engine VM](https://docs.cloud.google.com/compute/docs/instances/nested-virtualization/enabling)
+
 ## Install the application and service account
 
 ```bash
