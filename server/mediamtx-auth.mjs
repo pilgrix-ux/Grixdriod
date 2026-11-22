@@ -67,11 +67,31 @@ async function verifyViewer(deviceId, accessToken) {
   });
   if (!deviceResponse.ok) return false;
   const devices = await deviceResponse.json();
-  return Array.isArray(devices) &&
-    devices.length === 1 &&
-    devices[0].id === deviceId &&
-    devices[0].state === 'running' &&
-    devices[0].stream_state === 'ready';
+  if (!Array.isArray(devices) || devices.length !== 1 ||
+      devices[0].id !== deviceId || devices[0].state !== 'running' ||
+      devices[0].stream_state !== 'ready') return false;
+
+  // Device ownership alone is not enough: require a current, owner-scoped
+  // worker session lease. Workers renew this short lease while the runtime is live.
+  const sessionQuery = new URLSearchParams({
+    select: 'id,state,expires_at',
+    device_id: 'eq.' + deviceId,
+    user_id: 'eq.' + user.id,
+    state: 'eq.connected',
+    expires_at: 'gt.' + new Date().toISOString(),
+    limit: '1',
+  });
+  const sessionResponse = await fetch(SUPABASE_URL + '/rest/v1/cloud_device_sessions?' + sessionQuery.toString(), {
+    headers,
+    cache: 'no-store',
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!sessionResponse.ok) return false;
+  const sessions = await sessionResponse.json();
+  return Array.isArray(sessions) && sessions.some((session) =>
+    session.state === 'connected' &&
+    Date.parse(session.expires_at || '') > Date.now()
+  );
 }
 
 async function handle(req, res) {
