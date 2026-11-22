@@ -28,55 +28,55 @@ The worker checks for Android accounts on every inspection. It refuses to advert
 
 On the trusted worker host, with the phone connected and authorized:
 
-\`\`\`bash
+```bash
 adb devices -l
 adb -s YOUR_USB_SERIAL shell getprop ro.product.manufacturer
 adb -s YOUR_USB_SERIAL shell getprop ro.product.model
 adb -s YOUR_USB_SERIAL shell getprop ro.product.device
 adb -s YOUR_USB_SERIAL shell getprop ro.build.version.release
 adb -s YOUR_USB_SERIAL shell getprop ro.build.fingerprint
-\`\`\`
+```
 
-Copy the exact outputs into \`.env.physical-worker\`:
+Copy the exact outputs into `.env.physical-worker`:
 
-- \`GRIXDROID_PHYSICAL_DEVICE_SERIAL\`: USB serial shown by \`adb devices -l\`
-- \`GRIXDROID_PHYSICAL_DEVICE_MODEL\`: one of the stable IDs from the allowlist above
-- \`GRIXDROID_PHYSICAL_PRODUCT_MODEL\`: exact \`ro.product.model\`
-- \`GRIXDROID_PHYSICAL_HARDWARE_MODEL\`: exact \`ro.product.device\`
-- \`GRIXDROID_PHYSICAL_ANDROID_VERSION\`: exact \`ro.build.version.release\`
-- \`GRIXDROID_PHYSICAL_BUILD_FINGERPRINT\`: exact full \`ro.build.fingerprint\`
+- `GRIXDROID_PHYSICAL_DEVICE_SERIAL`: USB serial shown by `adb devices -l`
+- `GRIXDROID_PHYSICAL_DEVICE_MODEL`: one of the stable IDs from the allowlist above
+- `GRIXDROID_PHYSICAL_PRODUCT_MODEL`: exact `ro.product.model`
+- `GRIXDROID_PHYSICAL_HARDWARE_MODEL`: exact `ro.product.device`
+- `GRIXDROID_PHYSICAL_ANDROID_VERSION`: exact `ro.build.version.release`
+- `GRIXDROID_PHYSICAL_BUILD_FINGERPRINT`: exact full `ro.build.fingerprint`
 
 Do not invent or shorten the model or fingerprint. These values are kept in the worker's private configuration and worker capability record; the ADB serial itself is not sent to Supabase (only its SHA-256 digest is used as an opaque runtime handle).
 
 ## Install and run
 
-Requirements: Node.js 20+, Android Platform Tools, a USB-connected authorized handset, the same scrcpy server JAR version as \`SCRCPY_VERSION\`, FFmpeg built with the WHIP muxer and its authorization option, and the existing GRIXDroid MediaMTX gateway.
+Requirements: Node.js 20+, Android Platform Tools, a USB-connected authorized handset, the same scrcpy server JAR version as `SCRCPY_VERSION`, FFmpeg built with the WHIP muxer and its authorization option, and the existing GRIXDroid MediaMTX gateway.
 
-\`\`\`bash
+```bash
 cp .env.physical-worker.example .env.physical-worker
 # Edit the file and set the exact values from the connected handset.
 npm ci
-\`\`\`
+```
 
 Review every value before starting. The example deliberately sets:
 
-\`\`\`dotenv
+```dotenv
 GRIXDROID_PHYSICAL_ENABLE_RESET=0
-\`\`\`
+```
 
-Only change it to \`1\` after confirming that the handset is a dedicated, account-free test device. The worker refuses to start without this explicit opt-in.
+Only change it to `1` after confirming that the handset is a dedicated, account-free test device. The worker refuses to start without this explicit opt-in.
 
 Start the worker:
 
-\`\`\`bash
+```bash
 npm run physical-device-worker
-\`\`\`
+```
 
 The first authenticated heartbeat creates or updates its private worker-registry row. The worker has capacity one and advertises only its verified physical target. It never receives more than one device request at a time. Its local health endpoint binds to loopback only.
 
 ## Session isolation and cleanup
 
-The control plane leases a physical handset exclusively to one request at a time. On start, the worker records an owner-scoped \`cloud_device_sessions\` row with a two-minute renewable lease. It renews the lease while the worker is live. The MediaMTX auth callback requires both the signed-in device owner and a current, unexpired session lease before allowing WebRTC playback. A dead worker therefore stops authorizing new playback after the short lease expires.
+The control plane leases a physical handset exclusively to one request at a time. On start, the worker records an owner-scoped `cloud_device_sessions` row with a two-minute renewable lease. It renews the lease while the worker is live. The MediaMTX auth callback requires both the signed-in device owner and a current, unexpired session lease before allowing WebRTC playback. A dead worker therefore stops authorizing new playback after the short lease expires.
 
 At session end or idle timeout, the worker:
 
@@ -93,11 +93,11 @@ If the phone is unplugged, its target is withdrawn and the current session is ma
 
 ## Multiple physical phones
 
-Run a separate worker process for each real handset. Give each one a unique \`GRIXDROID_WORKER_ID\`, \`GRIXDROID_PHYSICAL_DEVICE_SERIAL\`, \`GRIXDROID_PHYSICAL_WORKER_PORT\` and \`GRIXDROID_PHYSICAL_STATE_DIR\`. Do not use the ten-Pixel AVD launcher to start OEM devices.
+Run a separate worker process for each real handset. Give each one a unique `GRIXDROID_WORKER_ID`, `GRIXDROID_PHYSICAL_DEVICE_SERIAL`, `GRIXDROID_PHYSICAL_WORKER_PORT` and `GRIXDROID_PHYSICAL_STATE_DIR`. Do not use the ten-Pixel AVD launcher to start OEM devices.
 
 ## Security and operational boundaries
 
-- Keep \`.env.physical-worker\` on the worker host and out of Git.
+- Keep `.env.physical-worker` on the worker host and out of Git.
 - The Supabase secret API key and legacy service-role JWT are server-only.
 - Never expose ADB, the worker process API, scrcpy, MediaMTX auth callback or stream-publish token directly to browsers.
 - The public stream uses HTTPS; the MediaMTX auth callback remains loopback-only.
