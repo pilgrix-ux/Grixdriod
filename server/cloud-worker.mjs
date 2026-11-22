@@ -399,7 +399,7 @@ async function assertSystemImageInstalled(config, systemImagePackage = config.sy
   const imageDir = path.join(config.sdkRoot, image.relativePath);
   const entries = await readdir(imageDir).catch(() => null);
   if (!entries || (!entries.includes('source.properties') && !entries.includes('package.xml'))) {
-    throw new Error('Android system image is not installed: ' + config.systemImage + '. Install it with sdkmanager before starting the worker.');
+    throw new Error('Android system image is not installed: ' + systemImagePackage + '. Install it with sdkmanager before starting the worker.');
   }
   return image;
 }
