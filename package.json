@@ -12,7 +12,8 @@
     "device-worker": "node --env-file=.env.worker server/cloud-worker.mjs",
     "test:worker": "node --test server/*.test.mjs",
     "mediamtx-auth": "node --env-file=.env.mediamtx-auth server/mediamtx-auth.mjs",
-    "physical-device-worker": "node --env-file=.env.physical-worker server/physical-device-worker.mjs"
+    "physical-device-worker": "node --env-file=.env.physical-worker server/physical-device-worker.mjs",
+    "device:ddp-smoke": "node scripts/google-ddp-device-smoke.mjs"
   },
   "devDependencies": {
     "typescript": "~5.9.3",

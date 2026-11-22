@@ -86,6 +86,10 @@ Run it from **Actions → Android Emulator Smoke (Free macOS) → Run workflow**
 
 This is an automated CI test, **not** an always-on cloud phone or a public streaming service. Standard GitHub-hosted runners are free for public repositories; see [GitHub Actions billing](https://docs.github.com/en/actions/concepts/billing-and-usage). The distinction between the temporary test emulator, private ADB bridge and a future persistent device host is documented in [the free-first Android plan](docs/FREE_FIRST_ANDROID_PLAN.md).
 
+## Genuine Samsung, OPPO and Xiaomi hardware
+
+The device catalogue includes real OEM phones hosted by Google's Developer Device Platform. GRIXDroid now has an operator-run, billing-gated preflight to reserve a supported physical model, verify its live Android build identity over ADB, and release the reservation. This is a hardware access test only; it does not yet enrol DDP devices into customer sessions. See [the Google physical-device preflight runbook](docs/GOOGLE_DEVICE_PLATFORM.md) for the supported device list, costs, setup and remaining integration work.
+
 ## Android runtime provider strategy
 
 GRIXDroid will use the official Android Emulator as its first cloud-device provider for ordinary APK install, launch and compatibility testing. Cuttlefish is planned as a separate optional provider for AOSP and custom system-image engineering; it is not a drop-in AVD replacement and is not yet implemented or hosted. The browser Rust/WASM ARM Lab remains a separate research feature. See [Android runtime foundation](docs/ANDROID_RUNTIME_FOUNDATION.md) for the provider architecture, Cuttlefish prerequisites, free-first plan and current deployment boundaries.
