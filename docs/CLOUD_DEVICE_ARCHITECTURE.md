@@ -103,7 +103,7 @@ The dedicated Supabase project is **Grix emulator**. Keep the following migratio
 6. `supabase/migrations/20261119194706_grixdroid_apk_owner_read_policy.sql`
 7. `supabase/migrations/20261122002011_grixdroid_selectable_android_targets.sql`
 8. `supabase/migrations/20261122002238_grixdroid_capacity_aware_device_options.sql`
-9. `supabase/migrations/20261122003000_grixdroid_expanded_android_profiles.sql`
+9. `supabase/migrations/20261122003120_grixdroid_expanded_android_profiles.sql`
 
 The worker-queue migration adds service-role-only RPCs for heartbeat, atomic provisioning claims, lease renewal, completion/failure and device-state changes. The device-controls migration adds an owner-scoped command queue. The APK-install migration adds a private `grixdroid-apks` bucket (50 MB per APK), per-account folder policies, APK-install commands and a worker claim RPC that returns the owning user ID. The owner-read policy allows a signed-in user to inspect only their own APK objects. Worker RPCs remain service-role-only and are not callable by `anon` or `authenticated`.
 
