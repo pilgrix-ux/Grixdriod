@@ -73,7 +73,7 @@ language sql
 stable
 security definer
 set search_path = ''
-as $
+as $target$
   select (select auth.uid()) is not null
     and exists (
       select 1
@@ -88,7 +88,7 @@ as $
         and (case when jsonb_typeof(w.capabilities -> 'device_models') = 'array'
           then w.capabilities -> 'device_models' else '[]'::jsonb end) ? p_device_model
     );
-$;
+$target$;
 
 revoke all on function public.grixdroid_target_supported(text, text) from public, anon;
 grant execute on function public.grixdroid_target_supported(text, text) to authenticated;
