@@ -114,7 +114,7 @@ function parseConfig(env) {
 
 async function listReservations(config) {
   const result = await run(config.android, [
-    'device', 'remote', 'list', '--all', '--short', '--project=' + config.projectId,
+    'device', 'remote', 'list', '--short', '--project=' + config.projectId,
   ]);
   return parseReservationIds(result.stdout);
 }
@@ -176,6 +176,9 @@ async function releaseReservation(config, reservationId) {
 export async function runGoogleDdpSmoke(env = process.env) {
   const config = parseConfig(env);
   const reservationsBefore = await listReservations(config);
+  if (reservationsBefore.length) {
+    throw new Error('This preflight project already has an active device reservation. Use a dedicated test project with no concurrent sessions, or close the existing reservation first.');
+  }
   const adbBefore = (await listAdbDevices(config)).map((item) => item.serial);
   let reservationId = null;
   let primaryError = null;
