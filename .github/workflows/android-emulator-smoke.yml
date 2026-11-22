@@ -72,6 +72,19 @@ jobs:
           node --check server/cloud-worker.android-smoke.mjs
           node --test server/cloud-worker.test.mjs
 
+      - name: Set up Java for Maestro
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Maestro CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
       - name: Boot Android and smoke-test system services
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -108,7 +121,12 @@ jobs:
             echo "Testing the actual GRIXDroid worker against this Android AVD:"
             node server/cloud-worker.android-smoke.mjs
 
-      - name: Save Android boot evidence
+            echo "Running the GRIXDroid Maestro UI smoke flow:"
+            export PATH="$HOME/.maestro/bin:$PATH"
+            maestro --version
+            maestro test .maestro/emulator-smoke.yaml
+
+      - name: Save Android and Maestro evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -118,5 +136,6 @@ jobs:
             ${{ runner.temp }}/grixdroid-android-activities.txt
             ${{ runner.temp }}/grixdroid-android-smoke.txt
             ${{ runner.temp }}/grixdroid-android-fingerprint.txt
+            ~/.maestro/tests/
           if-no-files-found: warn
           retention-days: 3

@@ -1130,7 +1130,7 @@ export async function startCloudWorker(config = getWorkerConfig()) {
   if (!config.apiToken) process.stdout.write('[worker] Local API bearer token (shown once): ' + token + '\n');
   process.stdout.write('[worker] Data root: ' + config.dataRoot + '\n');
   process.stdout.write('[worker] Android image: ' + config.systemImage + '\n');
-  process.stdout.write('[worker] Android API level: ' + image.apiLevel + ' | Play Store image: ' + (image.hasPlayStore ? 'required' : 'not included') + '\n');
+  process.stdout.write('[worker] Configured Android images: ' + config.systemImages.map((entry) => 'Android ' + entry.androidVersion + ' (API ' + entry.apiLevel + ', Play Store ' + (entry.hasPlayStore ? 'yes' : 'no') + ')').join('; ') + '\n');
   process.stdout.write('[worker] Acceleration: ' + config.accel + ' | GPU: ' + config.gpu + '\n');
 
   let stopping = false;
