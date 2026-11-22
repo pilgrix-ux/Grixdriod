@@ -28,7 +28,7 @@ Availability is project- and time-dependent. Always check `android device remote
 - Physical-device streaming is metered. The published Preview rate is currently **US$0.15 per device-minute**. A one-hour reservation could therefore cost about US$9 before any applicable tax or other charges. Confirm the current rate in the Google Cloud pricing page first.
 - A Google Cloud project with billing enabled and the required DDP APIs/IAM permissions is required. The person responsible for that Google Cloud billing account must approve and configure it.
 - Do not add service-account keys, Google OAuth tokens, or cloud credentials to this repository, Supabase, Vercel frontend variables, or a client browser.
-- The smoke command refuses to reserve a device unless `GRIXDROID_DDP_CONFIRM_BILLING=yes` is set. That flag records an operator's explicit approval; it is not a budget cap.
+- The smoke command refuses to reserve a device unless `GRIXDROID_DDP_CONFIRM_BILLING=yes` is set and the project has no other active device reservations. That flag records an operator's explicit approval; it is not a budget cap. Use a dedicated project and do not run preflights concurrently.
 - Remove the reservation after the test. The script attempts `disconnect` and `remove` in a `finally` block, including when identity verification fails. Check the Google Cloud reservation list after any interrupted run.
 
 ## Prepare the Google Cloud project
@@ -39,7 +39,7 @@ A billing/account owner must:
 2. Enable Developer Device Platform / Device Streaming APIs as documented in Google's Quickstart.
 3. Grant only the documented roles needed for device streaming and quota/project use.
 4. Complete `android auth login` under the authorised operator account on the worker host.
-5. Verify `android device remote projects` lists the intended project and `android device remote models` shows the target device.
+5. Verify `android device remote projects` lists the intended project and `android device remote models` shows the target device. Use a dedicated GRIXDroid test project with no other active device reservations, and run only one preflight at a time.
 
 Do not use a personal Google account or a project belonging to another GRIXDroid product. Do not turn on billing merely to try this test without the account owner's approval.
 
