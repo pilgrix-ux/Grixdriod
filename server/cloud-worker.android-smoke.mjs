@@ -39,6 +39,16 @@ async function waitFor(check, description, timeoutMs = 120000) {
   throw new Error('Timed out waiting for ' + description + (lastError ? ': ' + lastError.message : '.'));
 }
 
+function parseActiveDisplaySize(output) {
+  const lines = String(output || '').split(String.fromCharCode(10));
+  const line = [...lines].reverse().find((value) => value.includes('x'));
+  if (!line) return null;
+  const sizeText = line.slice(line.lastIndexOf(':') + 1).trim();
+  const dimensions = sizeText.split('x').map((value) => Number(value.trim()));
+  if (dimensions.length !== 2 || !dimensions.every(Number.isFinite)) return null;
+  return { width: dimensions[0], height: dimensions[1] };
+}
+
 async function listen(server) {
   await new Promise((resolve, reject) => {
     server.once('error', reject);
@@ -214,9 +224,8 @@ async function main() {
       throw new Error('Worker rejected the 360p display preset: ' + (actionResult.failureReason || 'unknown error'));
     }
     const resized = await run(adb, ['-s', serial, 'shell', 'wm', 'size']);
-    const resizedMatches = [...String(resized.stdout).matchAll(/(\\d+)\\s*x\\s*(\\d+)/g)];
-    const activeSize = resizedMatches[resizedMatches.length - 1];
-    if (!activeSize || Number(activeSize[1]) !== 360 || Number(activeSize[2]) !== 800) {
+    const activeSize = parseActiveDisplaySize(resized.stdout);
+    if (activeSize?.width !== 360 || activeSize?.height !== 800) {
       throw new Error('Worker did not apply the 360p Android display preset: ' + String(resized.stdout).trim());
     }
     console.log('[smoke] Worker action queue applied and verified the 360x800 Android display preset.');
@@ -247,9 +256,8 @@ async function main() {
       throw new Error('Worker metadata did not retain the selected 360p display preset after restart: ' + JSON.stringify(after.resolution));
     }
     const restoredSize = await run(adb, ['-s', serial, 'shell', 'wm', 'size']);
-    const restoredMatches = [...String(restoredSize.stdout).matchAll(/(\\d+)\\s*x\\s*(\\d+)/g)];
-    const restoredActiveSize = restoredMatches[restoredMatches.length - 1];
-    if (!restoredActiveSize || Number(restoredActiveSize[1]) !== 360 || Number(restoredActiveSize[2]) !== 800) {
+    const restoredActiveSize = parseActiveDisplaySize(restoredSize.stdout);
+    if (restoredActiveSize?.width !== 360 || restoredActiveSize?.height !== 800) {
       throw new Error('Android did not retain the selected 360p display preset after worker restart: ' + String(restoredSize.stdout).trim());
     }
 
