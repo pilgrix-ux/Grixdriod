@@ -787,6 +787,9 @@ async function processQueuedDeviceActions(config, instances) {
       if (!meta || meta.state !== 'running') {
         throw new Error('Android device is not running on this worker.');
       }
+      if (!meta.userId || item.user_id !== meta.userId) {
+        throw new Error('Input action owner does not match the active Android device session.');
+      }
       await executeAction(config, meta, item.command, { userId: item.user_id, deviceId: item.device_id });
     } catch (error) {
       failure = error instanceof Error ? error.message : String(error);
