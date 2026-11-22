@@ -427,7 +427,7 @@ async function installApk(config, meta, action, userId, deviceId) {
   const localPath = path.join(config.stateRoot, 'grixdroid-' + randomUUID() + '.apk');
   try {
     await writeFile(localPath, bytes, { mode: 0o600, flag: 'wx' });
-    const result = await adb(config, config.serial, ['install', '-r', localPath], { timeout: 180000, maxBuffer: 2 * 1024 * 1024 });
+    const result = await adb(config, config.serial, ['install', localPath], { timeout: 180000, maxBuffer: 2 * 1024 * 1024 });
     const output = String(result.stdout || '') + String(result.stderr || '');
     if (!/success/i.test(output)) throw new Error(output.trim() || 'Android package installer did not confirm success.');
   } finally {
