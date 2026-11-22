@@ -59,6 +59,10 @@ Install the default image with `sdkmanager --licenses` and `sdkmanager "platform
 
 Use a dedicated, account-free lab handset connected to the worker host by USB. Configure a separate `.env.physical-worker` with the exact device properties read from ADB, the matching MediaMTX publishing credentials and a unique worker UUID. The physical worker requires `GRIXDROID_PHYSICAL_ENABLE_RESET=1` as an explicit destructive-cleanup opt-in. It resets session-installed apps, baseline third-party app data and common shared folders between controlled test sessions; this is not a factory reset or a hardened multi-tenant Android sandbox. Do not enroll a personal phone or expose the worker to untrusted public users. See [physical device worker setup](docs/PHYSICAL_DEVICE_WORKER.md).
 
+## Persistent Linux worker deployment
+
+For a reboot-safe Pixel worker and an optional one-handset physical OEM worker, use the [persistent Linux host runbook](docs/PERSISTENT_WORKER_HOST.md). It includes systemd units, private environment-file placement, KVM requirements and service health checks. The runbook does not provision a VM or MediaMTX host.
+
 ## Real Android web integration
 
 The website now includes a **Real Android device** panel. It connects to an Android phone or an already-running Android Emulator through the private ADB bridge in `server/adb-bridge.mjs`.
