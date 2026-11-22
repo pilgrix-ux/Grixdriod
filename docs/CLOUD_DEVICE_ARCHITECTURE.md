@@ -183,4 +183,13 @@ This is the control-plane/data-model foundation, not an Appetize.io replacement 
 - No public network egress/IP isolation is provisioned yet.
 - No Google Play packages are redistributed by GRIXDroid.
 
-The database migrations now include provider-specific target discovery: the Android Emulator worker can expose Pixel AVD targets, while Samsung/OPPO/Xiaomi models require a verified physical-device capability record. No dedicated OEM physical-device provider is currently enrolled. The next deployment milestone is to enroll a persistent Android worker on a durable host, install the Android versions and device profiles to be offered, configure the MediaMTX gateway and Vercel frontend variables, then verify real Android boot, touch control, persistent stop/start and end-to-end WebRTC playback.
+The database migrations include provider-specific target discovery: the Android Emulator worker exposes Pixel AVD targets, while Samsung/OPPO/Xiaomi models are claimable only from a verified physical-device capability record. The physical worker code is present, but no OEM handset worker is enrolled yet. The connected backend still has zero registered workers and zero provisioned devices. The next deployment milestone is to install the Pixel worker on a durable virtualization host, connect dedicated physical handsets to individual physical workers, configure MediaMTX and the Vercel frontend variable, then run end-to-end boot, touch, cleanup, reconnect and WHEP playback tests. This repository change does not create or purchase hosting.
+
+
+## Security review status
+
+The Supabase security advisor flags two authenticated-callable SECURITY DEFINER functions: `grixdroid_get_device_options()` and `grixdroid_target_supported(text,text)`. They are intentionally used to read a narrow availability result from the private worker registry without granting browser roles access to `grixdroid_private`. Both functions set an empty search path, require an authenticated `auth.uid()`, and return only device options or a boolean. Their execute grants must remain limited to `authenticated`; do not grant browser roles access to the private schema or worker tables. Re-review these functions if their return shape or caller permissions change.
+
+The private worker tables intentionally have no browser RLS policies because the schema is revoked from `public`, `anon` and `authenticated`; only the server-side `service_role` is granted schema/table access. Keep this separation intact.
+
+The connected project's Auth leaked-password protection setting is still disabled according to the Supabase security advisor. It is a project Auth configuration setting, not a SQL/RLS setting; enable it in Supabase Dashboard → Authentication → Settings → Passwords before inviting testers. The connected tool integration does not expose that Auth configuration control, so this repository change cannot toggle it.

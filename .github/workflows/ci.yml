@@ -33,8 +33,16 @@ jobs:
           node-version: 22
       - name: Install frontend dependencies
         run: npm ci --no-audit --no-fund
-      - name: Validate ADB bridge JavaScript
-        run: node --check server/adb-bridge.mjs
+      - name: Validate Android worker JavaScript
+        run: |
+          node --check server/adb-bridge.mjs
+          node --check server/cloud-worker.mjs
+          node --check server/physical-device-worker.mjs
+          node --check server/mediamtx-auth.mjs
+      - name: Test emulator and physical worker safety rules
+        run: npm run test:worker
+      - name: Validate the friends-test fleet launcher
+        run: bash -n scripts/friends-test-fleet.sh
       - name: Run Rust tests
         run: cargo test --locked --lib
       - name: Build WebAssembly and browser app
