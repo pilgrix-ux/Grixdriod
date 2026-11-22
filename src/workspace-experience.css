@@ -192,6 +192,8 @@
 .grix-cloud-request-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: .75rem; }
 .grix-cloud-request-form .grix-cloud-primary { grid-column: 1 / -1; justify-self: start; min-width: 160px; }
 .grix-cloud-target-status { grid-column: 1 / -1; margin: -.2rem 0 0; color: #8b96a6; font-size: .66rem; line-height: 1.5; }
+.grix-cloud-ios-note { grid-column: 1 / -1; margin: 0; padding: .75rem .85rem; border: 1px solid #e7ebf1; border-radius: 9px; background: #fff; color: #778397; font-size: .68rem; line-height: 1.55; }
+.grix-cloud-ios-note strong { color: #46536a; }
 .grix-cloud-request-form label { display: grid; gap: .35rem; color: #677489; font-size: .67rem; font-weight: 700; }
 .grix-cloud-request-form input, .grix-cloud-request-form select {
   min-width: 0; min-height: 39px; padding: .55rem .65rem; border: 1px solid #dfe5ed;
