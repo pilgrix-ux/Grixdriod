@@ -63,7 +63,7 @@ test('physical worker configuration requires an allowlisted OEM and a pinned USB
   assert.equal(config.enableReset, true);
   assert.throws(() => getPhysicalWorkerConfig(validEnv({ GRIXDROID_PHYSICAL_DEVICE_MODEL: 'pixel_7' })), /allowlist/);
   assert.throws(() => getPhysicalWorkerConfig(validEnv({ GRIXDROID_PHYSICAL_DEVICE_SERIAL: '192.0.2.4:5555' })), /pinned USB ADB serial/);
-  assert.throws(() => getPhysicalWorkerConfig(validEnv({ GRIXDROID_PHYSICAL_ANDROID_VERSION: '17' })), /Android release/);
+  assert.throws(() => getPhysicalWorkerConfig(validEnv({ GRIXDROID_PHYSICAL_ANDROID_VERSION: '17' })), /must be one of 12, 12L, 13, 14, 15 or 16/);
 });
 
 test('reset remains disabled unless the operator explicitly opts in', () => {
