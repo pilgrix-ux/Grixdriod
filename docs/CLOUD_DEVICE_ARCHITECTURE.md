@@ -71,7 +71,7 @@ Copy .env.example to .env.local and set:
 
 Only the publishable key belongs in the frontend. Never set VITE_SUPABASE_SERVICE_ROLE_KEY.
 
-Apply the ordered migrations under `supabase/migrations/` to the dedicated GRIXDroid Supabase project. The latest migration, `20261122010000_grixdroid_selectable_android_targets.sql`, adds selected Android release/model metadata, a worker-capability lookup RPC, and queue/RLS validation. Do not reuse a different application's project without intentionally reviewing ownership, billing and existing data.
+Apply the ordered migrations under `supabase/migrations/` to the dedicated GRIXDroid Supabase project. The latest migration, `20261122002011_grixdroid_selectable_android_targets.sql`, adds selected Android release/model metadata, a worker-capability lookup RPC, and queue/RLS validation. Do not reuse a different application's project without intentionally reviewing ownership, billing and existing data.
 
 **Data API exposure:** Supabase changed the default exposure behavior for newly created tables in 2026. If the project does not expose the public schema through its Data API, explicitly enable the public schema in the project's API settings before using this browser REST integration. The migration grants only the required table privileges and still enforces RLS.
 
@@ -101,7 +101,7 @@ The dedicated Supabase project is **Grix emulator**. Keep the following migratio
 4. `supabase/migrations/20261119192634_grixdroid_device_controls.sql`
 5. `supabase/migrations/20261119194619_grixdroid_apk_install_tools.sql`
 6. `supabase/migrations/20261119194706_grixdroid_apk_owner_read_policy.sql`
-7. `supabase/migrations/20261122010000_grixdroid_selectable_android_targets.sql`
+7. `supabase/migrations/20261122002011_grixdroid_selectable_android_targets.sql`
 
 The worker-queue migration adds service-role-only RPCs for heartbeat, atomic provisioning claims, lease renewal, completion/failure and device-state changes. The device-controls migration adds an owner-scoped command queue. The APK-install migration adds a private `grixdroid-apks` bucket (50 MB per APK), per-account folder policies, APK-install commands and a worker claim RPC that returns the owning user ID. The owner-read policy allows a signed-in user to inspect only their own APK objects. Worker RPCs remain service-role-only and are not callable by `anon` or `authenticated`.
 
