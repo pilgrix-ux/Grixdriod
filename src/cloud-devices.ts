@@ -917,13 +917,18 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
   get<HTMLButtonElement>('#grix-cloud-devtools-show').addEventListener('click', () => setShowHide('grix-cloud-devtools-show', 'grix-cloud-devtools-hide', 'grix-cloud-devtools', true));
   get<HTMLButtonElement>('#grix-cloud-devtools-hide').addEventListener('click', () => setShowHide('grix-cloud-devtools-show', 'grix-cloud-devtools-hide', 'grix-cloud-devtools', false));
   const resolutionSelect = get<HTMLSelectElement>('#grix-cloud-resolution');
+  let lastQueuedResolutionPreset = resolutionSelect.value;
   resolutionSelect.addEventListener('change', () => {
     const preset = resolutionSelect.value;
+    resolutionSelect.disabled = true;
     void sendViewerCommand({ type: 'resolution', preset }).then(() => {
-      viewerInputStatus.textContent = 'Android display quality changed to ' + preset + '.';
+      lastQueuedResolutionPreset = preset;
+      viewerInputStatus.textContent = 'Display quality request queued: ' + preset + '.';
     }).catch((error) => {
-      resolutionSelect.value = '720p';
-      viewerInputStatus.textContent = userFacingError(error, 'Display quality could not be changed.');
+      resolutionSelect.value = lastQueuedResolutionPreset;
+      viewerInputStatus.textContent = userFacingError(error, 'Display quality request could not be queued.');
+    }).finally(() => {
+      resolutionSelect.disabled = false;
     });
   });
   get<HTMLButtonElement>('#grix-cloud-viewer-menu').addEventListener('click', () => {
