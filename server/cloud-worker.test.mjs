@@ -120,7 +120,7 @@ test('worker config exposes only the Android images and device models installed 
   assert.deepEqual(config.systemImages.map((image) => image.androidVersion), ['14', '15', '16']);
   assert.deepEqual(config.deviceModels, ['pixel_7', 'pixel_8', 'pixel_9']);
   assert.throws(() => getWorkerConfig({ GRIXDROID_SYSTEM_IMAGES: 'system-images;android-37;google_apis;x86_64' }), /supported GRIXDroid range/);
-  assert.throws(() => getWorkerConfig({ GRIXDROID_DEVICE_MODELS: 'pixel_7; rm -rf' }), /Android Virtual Device model IDs/);
+  assert.throws(() => getWorkerConfig({ GRIXDROID_DEVICE_MODELS: 'pixel_7; rm -rf' }), /supported Pixel AVD IDs/);
 });
 
 test('finds avdmanager in versioned Android SDK command-line tools directories', () => {
