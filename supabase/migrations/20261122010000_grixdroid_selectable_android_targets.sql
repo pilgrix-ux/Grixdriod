@@ -62,15 +62,19 @@ revoke all on function public.grixdroid_get_device_options() from public, anon;
 grant execute on function public.grixdroid_get_device_options() to authenticated;
 
 -- Do not accept a target which no recently active worker says it can create.
-drop policy if exists "Users submit their own cloud device requests" on public.cloud_device_requests;
-create policy "Users submit their own cloud device requests"
-  on public.cloud_device_requests for insert to authenticated
-  with check (
-    (select auth.uid()) is not null
-    and (select auth.uid()) = user_id
-    and status = 'queued'
-    and fulfilled_device_id is null
-    and failure_reason is null
+-- Use a narrowly granted SECURITY DEFINER predicate because authenticated users
+-- deliberately have no USAGE on the private worker schema.
+create or replace function public.grixdroid_target_supported(
+  p_android_version text,
+  p_device_model text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $
+  select (select auth.uid()) is not null
     and exists (
       select 1
       from grixdroid_private.workers w
@@ -80,10 +84,25 @@ create policy "Users submit their own cloud device requests"
       ) as image(value)
       where w.status in ('ready', 'busy')
         and w.last_heartbeat_at > now() - interval '2 minutes'
-        and image.value ->> 'android_version' = cloud_device_requests.android_version
-        and case when jsonb_typeof(w.capabilities -> 'device_models') = 'array'
-          then w.capabilities -> 'device_models' else '[]'::jsonb end ? cloud_device_requests.device_model
-    )
+        and image.value ->> 'android_version' = p_android_version
+        and (case when jsonb_typeof(w.capabilities -> 'device_models') = 'array'
+          then w.capabilities -> 'device_models' else '[]'::jsonb end) ? p_device_model
+    );
+$;
+
+revoke all on function public.grixdroid_target_supported(text, text) from public, anon;
+grant execute on function public.grixdroid_target_supported(text, text) to authenticated;
+
+drop policy if exists "Users submit their own cloud device requests" on public.cloud_device_requests;
+create policy "Users submit their own cloud device requests"
+  on public.cloud_device_requests for insert to authenticated
+  with check (
+    (select auth.uid()) is not null
+    and (select auth.uid()) = user_id
+    and status = 'queued'
+    and fulfilled_device_id is null
+    and failure_reason is null
+    and public.grixdroid_target_supported(android_version, device_model)
   );
 
 revoke insert on table public.cloud_device_requests from authenticated;
