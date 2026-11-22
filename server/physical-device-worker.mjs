@@ -383,20 +383,28 @@ async function resetTestData(config, baselinePackages) {
   const currentPackages = await listThirdPartyPackages(config);
   const addedPackages = packagesToRemove(currentPackages, baselinePackages || []);
   for (const packageName of addedPackages) {
-    await adb(config, config.serial, ['shell', 'pm', 'uninstall', '--user', '0', packageName]).catch(() => {});
+    const result = await adb(config, config.serial, ['shell', 'pm', 'uninstall', '--user', '0', packageName]);
+    if (!/success/i.test(String(result.stdout || '') + String(result.stderr || ''))) {
+      throw new Error('Android did not confirm removal of session-installed package ' + packageName + '.');
+    }
   }
   for (const packageName of baselinePackages || []) {
-    await adb(config, config.serial, ['shell', 'pm', 'clear', '--user', '0', packageName]).catch(() => {});
+    const cleared = await adb(config, config.serial, ['shell', 'pm', 'clear', '--user', '0', packageName]);
+    if (!/success/i.test(String(cleared.stdout || '') + String(cleared.stderr || ''))) {
+      throw new Error('Android did not confirm clearing app data for ' + packageName + '.');
+    }
     const safePath = '/sdcard/Android/';
     for (const folder of ['data', 'media', 'obb']) {
-      await adb(config, config.serial, ['shell', 'rm', '-rf', safePath + folder + '/' + packageName]).catch(() => {});
+      await adb(config, config.serial, ['shell', 'rm', '-rf', safePath + folder + '/' + packageName]);
     }
   }
   await adb(config, config.serial, ['logcat', '-c']).catch(() => {});
   await adb(config, config.serial, ['shell', 'cmd', 'clipboard', 'clear']).catch(() => {});
   // This handset is dedicated to testing: clear shared user files as well as app-private data.
   for (const folder of ['Download', 'Documents', 'Movies', 'Pictures', 'Music', 'DCIM']) {
-    await adb(config, config.serial, ['shell', 'sh', '-c', 'find /sdcard/' + folder + ' -mindepth 1 -maxdepth 1 -exec rm -rf {} +']).catch(() => {});
+    const command = 'if [ -d /sdcard/' + folder + ' ]; then find /sdcard/' + folder +
+      ' -mindepth 1 -maxdepth 1 -exec rm -rf {} +; fi';
+    await adb(config, config.serial, ['shell', 'sh', '-c', command]);
   }
   return { uninstalledPackages: addedPackages.length, clearedPackages: (baselinePackages || []).length };
 }
@@ -628,8 +636,9 @@ async function startClaim(config, claim) {
     const deviceId = typeof result === 'string' ? result.replace(/^"+|"+$/g, '') : '';
     if (!UUID_RE.test(deviceId)) throw new Error('The control plane did not return a valid cloud device id.');
     meta.cloudDeviceId = deviceId;
-    await startStream(config, meta);
     await createSession(config, meta, claim.user_id);
+    await persistCurrent(config, meta);
+    await startStream(config, meta);
     await persistCurrent(config, meta);
     process.stdout.write('[physical-worker] Ready: ' + config.deviceModelId + ', Android ' + identity.androidVersion + ', device ' + deviceId + '.\n');
     return meta;
@@ -638,6 +647,7 @@ async function startClaim(config, claim) {
       await stopStream(config, meta).catch(() => {});
       await finishSession(config, meta, 'failed');
       await setDeviceState(config, meta, 'error').catch(() => {});
+      await completeCurrentFile(config).catch(() => {});
     }
     await callRpc(config, 'grixdroid_fail_device_request', {
       p_request_id: requestId,
@@ -759,10 +769,26 @@ async function startPhysicalWorker(config = getPhysicalWorkerConfig()) {
   }, config.actionPollMs);
   actionTimer.unref();
 
+  let sessionHeartbeatBusy = false;
+  const sessionTimer = setInterval(() => {
+    if (stopping || sessionHeartbeatBusy || !current ||
+        Date.now() - (current.lastSessionHeartbeatAt || 0) < 30000) return;
+    sessionHeartbeatBusy = true;
+    void touchSession(config, current)
+      .then(() => persistCurrent(config, current))
+      .catch(async (error) => {
+        await markCurrentError(config, current, 'Session lease renewal failed: ' + safeError(error));
+        current = null;
+      })
+      .finally(() => { sessionHeartbeatBusy = false; });
+  }, 10000);
+  sessionTimer.unref();
+
   const shutdown = async () => {
     if (stopping) return;
     stopping = true;
     clearInterval(actionTimer);
+    clearInterval(sessionTimer);
     if (current) await stopCurrent(config, current, 'shutdown');
     server.close();
     process.stdout.write('[physical-worker] Stopped. The handset remains powered on; its session apps and data were cleaned up.\n');
