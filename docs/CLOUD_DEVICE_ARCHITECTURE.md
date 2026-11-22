@@ -162,7 +162,7 @@ The local API uses a bearer token:
 | GET | `/api/v1/devices/:id/screenshot` | Capture the Android display as PNG |
 | POST | `/api/v1/devices/:id/actions` | Allowlisted tap, swipe, navigation key or text action |
 
-This API is intended for host-local development and diagnostics. It is not routed through the website's customer authentication. The optional MediaMTX WHIP/WHEP publishing path is separate; see [WebRTC streaming setup](WEBRTC_STREAMING.md). Do not expose the worker API directly to the internet. Remote binding requires explicit opt-in, a long API token, a strict origin list and a trusted HTTPS/private-network gateway.
+This API is intended for host-local development and diagnostics. It is not routed through the website's customer authentication. The scrcpy publisher uses a 1600-pixel maximum long edge so the free 720p portrait preset (720×1600) is not reduced to 1280 pixels before encoding. The browser/device stream still needs a real end-to-end gateway test before advertised as a verified 720p stream. The optional MediaMTX WHIP/WHEP publishing path is separate; see [WebRTC streaming setup](WEBRTC_STREAMING.md). Do not expose the worker API directly to the internet. Remote binding requires explicit opt-in, a long API token, a strict origin list and a trusted HTTPS/private-network gateway.
 
 ### Persistence and operational limits
 
