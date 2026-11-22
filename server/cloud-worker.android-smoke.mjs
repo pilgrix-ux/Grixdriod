@@ -74,6 +74,7 @@ async function main() {
     name: 'GRIXDroid CI Android',
     profile: 'compact',
     avdName,
+    systemImage,
     avdHome,
     deviceDir,
     port,
