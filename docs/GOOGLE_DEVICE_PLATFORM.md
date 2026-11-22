@@ -22,6 +22,24 @@ The published DDP catalogue currently lists these physical phone configurations 
 
 Availability is project- and time-dependent. Always check `android device remote models` in the billing-enabled project before relying on a listed target. The catalogue does not currently prove that OPPO Find X8 Pro or Xiaomi 14 Ultra is available; those models must remain unavailable until a genuine source lists them.
 
+## Free-first manual testing through Firebase Spark
+
+Before requesting a metered DDP reservation, use Android Device Streaming from Android Studio with a Firebase project on the Spark plan. Firebase currently includes **30 no-cost Android Device Streaming minutes per project per month**. Check the project's remaining quota before each test. The published additional usage rate on a paid Blaze project is $0.15 per minute, so do not switch plans or enable billing without the account owner's approval.
+
+1. Open Android Studio and sign in with an authorised Google developer account.
+2. Open **View → Tool Windows → Device Manager → Select Remote Devices**.
+3. Filter the Partner Device Labs catalog for Samsung, OPPO or Xiaomi and select a currently available model that supports Streaming.
+4. Connect and test briefly. The remote phone is a genuine physical OEM device, not an emulator.
+5. End the session with **Return and Erase Device** so the device is wiped and returned to the lab.
+
+The live catalog currently includes Samsung Galaxy S22/S23/S24 variants, OPPO A79 5G/A38 and Xiaomi 14, but the exact model and OS variant must still be confirmed in the project picker at reservation time.
+
+This Spark route is a manual hardware test. It does **not** connect the phone to GRIXDroid's customer device queue, and the 30-minute allowance is shared at project level. Use it to validate the real OEM target before the separate DDP worker/session integration is built.
+
+Official references:
+- [Android Device Streaming and Partner Device Labs](https://developer.android.com/studio/run/android-device-streaming)
+- [Firebase Test Lab and Android Device Streaming quotas/pricing](https://firebase.google.com/docs/test-lab/usage-quotas-pricing)
+
 ## Billing and access boundary
 
 - DDP is a Preview / Pre-GA service and is subject to Google's preview terms.
