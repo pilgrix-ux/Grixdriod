@@ -78,6 +78,12 @@ const DEVICE_MODEL_LABELS: Record<string, string> = {
   pixel_8_pro: 'Google Pixel 8 Pro',
   pixel_9: 'Google Pixel 9',
   pixel_9_pro: 'Google Pixel 9 Pro',
+  samsung_galaxy_s22: 'Samsung Galaxy S22 (virtual profile)',
+  samsung_galaxy_s23: 'Samsung Galaxy S23 (virtual profile)',
+  samsung_galaxy_s24: 'Samsung Galaxy S24 (virtual profile)',
+  samsung_galaxy_s24_ultra: 'Samsung Galaxy S24 Ultra (virtual profile)',
+  oppo_find_x8_pro: 'OPPO Find X8 Pro (virtual profile)',
+  xiaomi_14_ultra: 'Xiaomi 14 Ultra (virtual profile)',
 };
 
 const GOOGLE_ICON_MARKUP = '<svg class="grix-cloud-google-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.74 7.18l7.73 6c4.51-4.18 7.05-10.33 7.05-17.65z"/><path fill="#34A853" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.75-4.59l-7.98-6.19C.91 16.67 0 20.21 0 24s.91 7.33 2.52 10.78l8.01-6.19z"/><path fill="#FBBC05" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.9 2.3-8.18 2.3-6.26 0-11.57-4.22-13.46-9.91l-8.01 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
@@ -942,7 +948,7 @@ export function mountCloudDevicesPanel(app: HTMLElement): void {
     }
     modelSelect.value = models.includes(previousModel) ? previousModel : (models[0] || '');
     modelSelect.disabled = models.length === 0;
-    targetStatus.textContent = 'Options are limited to Android images and device profiles installed on an online GRIXDroid worker.';
+    targetStatus.textContent = 'Android profiles use the installed Android system image with the selected screen profile; they do not include Samsung, OPPO or Xiaomi proprietary firmware. iPhone 11–15 simulators require a separate macOS iOS worker.';
     requestSubmit.disabled = busy || !availableTargets.some((target) =>
       target.android_version === versionSelect.value && target.device_model === modelSelect.value);
   }
