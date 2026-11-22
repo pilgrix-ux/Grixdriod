@@ -487,7 +487,7 @@ async function startWebRTCStream(config, meta) {
     'CLASSPATH=' + serverPath,
     'app_process', '/', 'com.genymobile.scrcpy.Server', config.scrcpyVersion,
     'tunnel_forward=true', 'audio=false', 'control=false', 'cleanup=false',
-    'raw_stream=true', 'max_size=1280',
+    'raw_stream=true', 'max_size=1600', // Preserve the longest edge of the free 720p portrait preset (720x1600).
   ];
   const scrcpy = spawn(config.adb, serverArgs, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
   meta.scrcpyProcess = scrcpy;
