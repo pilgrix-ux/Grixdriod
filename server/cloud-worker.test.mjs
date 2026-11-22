@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import os from 'node:os';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { getWorkerConfig, parseAvdSystemImagePath, parseResolution, parseSystemImagePackage, resolveAvdManagerPath, validateAction } from './cloud-worker.mjs';
+import { getWorkerConfig, parseAvdSystemImagePath, parseResolution, parseSystemImagePackage, profileSettings, resolveAvdManagerPath, validateAction } from './cloud-worker.mjs';
 
 test('normalizes tap coordinates without accepting values outside the screen', () => {
   assert.deepEqual(validateAction({ type: 'tap', x: 0.5, y: 0.25 }), { type: 'tap', x: 0.5, y: 0.25 });
@@ -108,6 +108,11 @@ test('parses the official Google Play Android Emulator system image', () => {
   });
   assert.equal(parseSystemImagePackage('system-images;android-35;google_apis;x86_64').hasPlayStore, false);
   assert.throws(() => parseSystemImagePackage('system-images;android-35;../bad;x86_64'), /must look like/);
+});
+
+test('new Android devices start with the free 720p portrait display size', () => {
+  assert.equal(profileSettings('compact').resolution, '720x1600');
+  assert.equal(profileSettings('standard').resolution, '720x1600');
 });
 
 test('worker config clamps capacity and keeps its API loopback-only by default', () => {
