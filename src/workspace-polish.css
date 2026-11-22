@@ -1,0 +1,178 @@
+/* GRIXDroid — simple, Appetize-inspired workspace polish */
+:root {
+  --grix-ink: #17213a;
+  --grix-muted: #758198;
+  --grix-line: #e7eaf2;
+  --grix-purple: #6246ea;
+  --grix-purple-soft: #f0edff;
+}
+html { background: #f7f8fc; }
+body { background: #f7f8fc; color: var(--grix-ink); }
+.grix-workspace-shell {
+  grid-template-columns: 218px minmax(0, 1fr);
+  background: #f7f8fc;
+}
+.grix-workspace-sidebar {
+  z-index: 8;
+  gap: 1.55rem;
+  padding: 1.45rem 1rem 1rem;
+  background: #fff;
+  color: var(--grix-ink);
+  border-right: 1px solid var(--grix-line);
+}
+.grix-workspace-side-brand { gap: .65rem; }
+.grix-workspace-mark {
+  width: 39px; height: 39px; border-radius: 12px;
+  background: linear-gradient(145deg, #7457ff, #5134dc);
+  color: #fff; box-shadow: 0 7px 16px rgba(98,70,234,.2);
+}
+.grix-workspace-side-brand strong { color: #18223b; font-size: 1.02rem; }
+.grix-workspace-side-brand small { color: #9aa3b5; }
+.grix-workspace-side-label { color: #a0a8b8; }
+.grix-workspace-nav { gap: .28rem; }
+.grix-workspace-nav-item {
+  min-height: 43px; color: #5e6a80; border-radius: 10px;
+}
+.grix-workspace-nav-item:hover { background: #f7f6ff; color: #4332b7; }
+.grix-workspace-nav-item.active {
+  color: #4f3bd2; background: var(--grix-purple-soft);
+  border-color: #e7e2ff;
+}
+.grix-workspace-nav-item.active .grix-workspace-nav-icon { color: #6246ea; }
+.grix-workspace-side-note { border-color: var(--grix-line); color: #8792a6; }
+.grix-workspace-topbar {
+  min-height: 76px; border-color: var(--grix-line);
+  background: rgba(255,255,255,.96);
+}
+.grix-workspace-breadcrumb { color: #929db0; }
+.grix-workspace-topbar h1 { color: #17213a; font-size: 1.08rem; }
+.grix-workspace-pages { width: min(100%, 1320px); padding: clamp(1.15rem, 2.7vw, 2.2rem); }
+.grix-workspace-page-intro { margin-bottom: 1.35rem; }
+.grix-workspace-page-intro h2 { color: #17213a; }
+.grix-workspace-page-intro p { color: #78849a; }
+.grix-workspace-button { min-height: 40px; border-radius: 9px; }
+.grix-workspace-button.primary {
+  border-color: var(--grix-purple);
+  background: var(--grix-purple);
+  box-shadow: 0 5px 13px rgba(98,70,234,.14);
+}
+.grix-workspace-button.primary:hover:not(:disabled) { background: #5138d4; }
+.grix-workspace-button.secondary { border-color: #e1e5ee; color: #46536a; }
+.grix-app-search, .grix-app-install-target { border-color: #e3e7ef !important; background: #fff !important; }
+.grix-app-group-filter, .grix-app-group-chip { border-radius: 999px !important; }
+.grix-app-group-filter.active, .grix-app-group-chip.active {
+  color: #5138d4 !important; border-color: #ded8ff !important; background: #f2efff !important;
+}
+.grix-app-card, .grix-app-item, .grix-session-card, .grix-device-card {
+  border-color: var(--grix-line) !important; border-radius: 13px !important;
+  box-shadow: 0 3px 12px rgba(25,35,58,.035);
+}
+.grix-workspace-page [data-page-panel] { min-width: 0; }
+.grix-workspace-shell button:focus-visible,
+.grix-workspace-shell input:focus-visible,
+.grix-workspace-shell select:focus-visible {
+  outline: 3px solid rgba(98,70,234,.2); outline-offset: 2px;
+}
+/* Keep the phone/session as the focal point without making controls noisy. */
+.grix-cloud-viewer {
+  padding: 1rem;
+  background: rgba(18,25,43,.72);
+  backdrop-filter: blur(8px);
+}
+.grix-cloud-viewer-shell {
+  width: min(100%, 1080px);
+  max-height: 94vh;
+  padding: 1rem;
+  gap: .75rem;
+  border: 1px solid #e3e7f0;
+  border-radius: 16px;
+  background: #fff;
+  color: #17213a;
+  box-shadow: 0 24px 80px rgba(15,23,42,.22);
+}
+.grix-cloud-viewer-toolbar {
+  color: #17213a; min-height: 42px;
+}
+.grix-cloud-viewer-toolbar button,
+.grix-cloud-viewer-shell button {
+  border-radius: 9px;
+}
+.grix-cloud-viewer video {
+  max-height: 64vh;
+  min-height: 220px;
+  background: #111827;
+  border: 1px solid #e5e8ef;
+  border-radius: 12px;
+}
+.grix-cloud-viewer-shell .grix-cloud-primary,
+.grix-cloud-viewer-shell button.primary {
+  background: var(--grix-purple); border-color: var(--grix-purple); color: #fff;
+}
+.grix-cloud-viewer-shell details,
+.grix-cloud-viewer-shell .grix-cloud-session-settings {
+  border-color: var(--grix-line);
+}
+.grix-cloud-viewer-shell input,
+.grix-cloud-viewer-shell select {
+  border: 1px solid #dfe4ed; border-radius: 8px; background: #fff; color: #17213a;
+}
+/* Device inventory, build/request and status surfaces */
+.grix-cloud-device-card, .grix-cloud-request-card {
+  border: 1px solid var(--grix-line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(25,35,58,.035);
+}
+.grix-cloud-state, .grix-cloud-status { border-radius: 999px; }
+.grix-cloud-request-box {
+  border: 1px solid #e7e3ff;
+  border-radius: 14px;
+  background: #fbfaff;
+}
+.grix-cloud-primary { background: var(--grix-purple); }
+.grix-cloud-primary:hover { background: #5138d4; }
+.grix-cloud-secondary { border-color: #e1e5ee; background: #fff; color: #46536a; }
+.grix-cloud-notice { border-radius: 10px; }
+@media (max-width: 760px) {
+  .grix-workspace-shell { display: flex; flex-direction: column; }
+  .grix-workspace-sidebar {
+    position: sticky; top: 0; z-index: 20;
+    display: grid; grid-template-columns: auto minmax(0,1fr);
+    align-items: center; gap: .65rem;
+    width: 100%; height: auto; min-height: 0;
+    padding: .7rem .85rem;
+    border-right: 0; border-bottom: 1px solid var(--grix-line);
+  }
+  .grix-workspace-side-brand { min-width: max-content; }
+  .grix-workspace-mark { width: 34px; height: 34px; }
+  .grix-workspace-side-brand strong { font-size: .9rem; }
+  .grix-workspace-side-brand small, .grix-workspace-side-label, .grix-workspace-side-note { display: none; }
+  .grix-workspace-nav {
+    display: flex; align-items: center; gap: .25rem;
+    min-width: 0; overflow-x: auto; scrollbar-width: none;
+  }
+  .grix-workspace-nav::-webkit-scrollbar { display: none; }
+  .grix-workspace-nav-item {
+    width: auto; min-height: 36px; flex: 0 0 auto;
+    gap: .35rem; padding: .45rem .58rem; font-size: .68rem;
+  }
+  .grix-workspace-nav-icon { width: auto; font-size: .95rem; }
+  .grix-workspace-topbar { position: static; min-height: 64px; padding: .75rem 1rem; }
+  .grix-workspace-pages { padding: 1rem; }
+  .grix-workspace-page-intro { align-items: flex-start; flex-direction: column; }
+  .grix-workspace-actions { width: 100%; }
+  .grix-workspace-actions .grix-workspace-button { flex: 1; }
+  .grix-cloud-viewer { padding: .45rem; }
+  .grix-cloud-viewer-shell { max-height: 97vh; padding: .6rem; border-radius: 12px; }
+  .grix-cloud-viewer video { min-height: 180px; max-height: 58vh; }
+}
+@media (max-width: 420px) {
+  .grix-workspace-side-brand { gap: .4rem; }
+  .grix-workspace-side-brand strong { font-size: .78rem; }
+  .grix-workspace-nav-item { padding: .4rem .45rem; font-size: .62rem; }
+  .grix-workspace-nav-icon { display: none; }
+  .grix-workspace-account #grix-cloud-account { max-width: 42vw; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
