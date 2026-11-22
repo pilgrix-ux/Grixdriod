@@ -8,7 +8,7 @@ This guide wires the Android worker's screen encoder to MediaMTX and lets the si
 2. The worker starts the matching scrcpy server on the Android device and reads its raw H.264 stream over a private ADB-forwarded localhost TCP port.
 3. FFmpeg publishes that H.264 stream to a per-device MediaMTX WHIP path.
 4. MediaMTX serves the device over WHEP/WebRTC.
-5. MediaMTX calls `server/mediamtx-auth.mjs` before publish/read. Publishing uses a server-only shared secret. Playback validates the visitor's Supabase access token and uses the device table's RLS policy to confirm ownership and that the device and stream are running.
+5. MediaMTX calls `server/mediamtx-auth.mjs` before publish/read. Publishing uses a server-only shared secret. Playback validates the visitor's Supabase access token, device ownership and an active owner-scoped `cloud_device_sessions` row with an unexpired worker lease; the device and stream must also be running.
 6. The Cloud Devices page uses the user's access token for WHEP; it never receives the worker publish secret or Supabase service-role key.
 
 ## Install host components
@@ -57,7 +57,7 @@ Do not expose the auth callback on the public network. Do not leave MediaMTX pub
 
 In `.env.worker`, set the scrcpy/FFmpeg/WHIP variables listed above. Keep the stream publish token private and use HTTPS for a remote MediaMTX endpoint. Start the worker using `npm run device-worker`.
 
-The worker marks `cloud_devices.stream_state` as `ready` only after the scrcpy stream and FFmpeg publisher remain alive through the initial WHIP handshake. The Android device can still boot if streaming is not configured; its stream state remains `disabled` or `error`.
+The worker marks `cloud_devices.stream_state` as `ready` only after the scrcpy stream and FFmpeg publisher remain alive through the initial WHIP handshake. Emulator and physical workers also create a device-owner session row and renew its two-minute lease while the worker is live. The auth callback rejects WHEP playback when that lease expires, even if a stale device row still says `running`. The Android device can still boot if streaming is not configured; its stream state remains `disabled` or `error`.
 
 ## Configure the website
 
@@ -78,7 +78,7 @@ The WHEP video track is receive-only. Touch and navigation input travel separate
 3. The Android worker polls `grixdroid_claim_device_actions` using its server-only service-role JWT, executes each command through ADB, and acknowledges it with `grixdroid_finish_device_action`.
 4. Only tap, swipe, Back, Home, Recent Apps, Enter and basic text input are accepted by the worker validator. The worker token and service-role key never enter the browser.
 
-The browser does not call the worker's private HTTP API directly. Input queue polling defaults to 350 ms and can be adjusted with `GRIXDROID_ACTION_POLL_MS`. Commands abandoned during a worker interruption are returned to the queue after a 30-second claim timeout.
+The browser does not call the worker's private HTTP API directly. Input queue polling defaults to 350 ms and can be adjusted with `GRIXDROID_ACTION_POLL_MS`. Commands abandoned during a worker interruption are returned to the queue after a 30-second claim timeout. Device sessions are separate from command claims: workers renew the owner-scoped session lease every 30 seconds, and the lease expires after two minutes without a successful renewal. The physical-device worker uses the same session lease and action queue; see [physical device worker setup](PHYSICAL_DEVICE_WORKER.md).
 
 Apply `supabase/migrations/20261119192634_grixdroid_device_controls.sql` with the other project migrations before enabling browser controls.
 ## Current boundaries
@@ -87,4 +87,5 @@ Apply `supabase/migrations/20261119192634_grixdroid_device_controls.sql` with th
 - WebRTC media traffic requires the host's reachable UDP port and enough bandwidth for each active device.
 - Device state and volume remain on the worker host; this first implementation does not migrate a volume to a different host.
 - There is no public multi-region scheduler, per-user bandwidth metering or production quota/billing layer yet.
+- The session lease is a short server-side authorization window, not a tenant data erasure guarantee. Physical handset cleanup is documented separately and is not a hardened multi-tenant sandbox.
 - Google Play is not included in the default `google_apis` image. Use only official SDK images under the applicable terms; GRIXDroid does not bundle or redistribute Google proprietary packages.
