@@ -15,7 +15,7 @@ alter table public.cloud_device_actions
     )
     and (
       command ->> 'type' <> 'resolution'
-      or command ->> 'preset' in ('180p', '360p', '480p', '720p')
+      or coalesce(command ->> 'preset' in ('180p', '360p', '480p', '720p'), false)
     )
   );
 
