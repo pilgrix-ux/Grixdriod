@@ -108,23 +108,26 @@ test('worker config clamps capacity and keeps its API loopback-only by default',
   assert.deepEqual(config.deviceModels, ['pixel_7']);
 });
 
-test('worker config exposes only the Android images and device models installed by its operator', () => {
+test('Android Emulator workers advertise only supported Pixel AVD device definitions', () => {
   const config = getWorkerConfig({
     GRIXDROID_SYSTEM_IMAGES: [
       'system-images;android-34;google_apis_playstore;x86_64',
       'system-images;android-35;google_apis_playstore;x86_64',
       'system-images;android-36;google_apis_playstore;x86_64',
     ].join(','),
-    GRIXDROID_DEVICE_MODELS: 'pixel_7,pixel_8,pixel_9,samsung_galaxy_s22,samsung_galaxy_s23,samsung_galaxy_s24,samsung_galaxy_s24_ultra,oppo_find_x8_pro,xiaomi_14_ultra',
+    GRIXDROID_DEVICE_MODELS: 'pixel_7,pixel_8,pixel_9',
   });
   assert.deepEqual(config.systemImages.map((image) => image.androidVersion), ['14', '15', '16']);
-  assert.deepEqual(config.deviceModels, [
-    'pixel_7', 'pixel_8', 'pixel_9',
-    'samsung_galaxy_s22', 'samsung_galaxy_s23', 'samsung_galaxy_s24', 'samsung_galaxy_s24_ultra',
-    'oppo_find_x8_pro', 'xiaomi_14_ultra',
-  ]);
+  assert.deepEqual(config.deviceModels, ['pixel_7', 'pixel_8', 'pixel_9']);
   assert.throws(() => getWorkerConfig({ GRIXDROID_SYSTEM_IMAGES: 'system-images;android-37;google_apis;x86_64' }), /supported GRIXDroid range/);
-  assert.throws(() => getWorkerConfig({ GRIXDROID_DEVICE_MODELS: 'pixel_7; rm -rf' }), /supported Android virtual device profile IDs/);
+  assert.throws(() => getWorkerConfig({ GRIXDROID_DEVICE_MODELS: 'pixel_7; rm -rf' }), /supported Android Emulator device model IDs/);
+  for (const model of ['samsung_galaxy_s22', 'samsung_galaxy_s23', 'samsung_galaxy_s24', 'samsung_galaxy_s24_ultra', 'oppo_find_x8_pro', 'xiaomi_14_ultra']) {
+    assert.throws(
+      () => getWorkerConfig({ GRIXDROID_DEVICE_MODELS: model }),
+      /supported Android Emulator device model IDs/,
+      model + ' must never be advertised by a generic AVD worker',
+    );
+  }
 });
 
 test('finds avdmanager in versioned Android SDK command-line tools directories', () => {

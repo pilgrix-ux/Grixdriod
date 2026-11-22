@@ -86,3 +86,7 @@ The repository does **not** yet contain:
 - A configured public streaming gateway and production customer session service.
 
 Keep the UI honest: show a runtime as available only when a healthy worker advertises that provider and the required image/toolchain is installed.
+
+### OEM firmware targets
+
+Samsung One UI, OPPO ColorOS and Xiaomi HyperOS are not properties that can be reconstructed by changing an AVD name, manufacturer string or resolution. GRIXDroid treats the Galaxy S22/S23/S24 family, OPPO Find X8 Pro and Xiaomi 14 Ultra as physical-device targets. A future `android-physical` worker must read the connected handset's manufacturer, model, Android release/API level and `ro.build.fingerprint` through ADB and advertise only the exact observed model/version pair. The database rejects OEM targets from `android-emulator` workers. A real-device pool also needs session isolation, data reset/cleanup, secure remote ADB and streaming before it can safely serve multiple accounts. The existing local ADB bridge is for a developer's own connected device; it is not that multi-tenant provider.
