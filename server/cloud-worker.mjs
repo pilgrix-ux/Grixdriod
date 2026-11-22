@@ -383,13 +383,18 @@ async function assertSystemImageInstalled(config) {
   return image;
 }
 
+export function parseAvdSystemImagePath(configText) {
+  // SDK-generated config.ini files may include whitespace around the key and '='.
+  const match = String(configText || '').match(/^\\s*image\\.sysdir\\.1\\s*=\\s*(.*?)\\s*$/mi);
+  return match ? match[1].trim().replace(/\\\\/g, '/').replace(/\\/+$/, '') : '';
+}
+
 async function verifyAvdImage(config, meta) {
   const image = parseSystemImagePackage(config.systemImage);
   const configFile = path.join(meta.avdHome, meta.avdName + '.avd', 'config.ini');
   const avdConfig = await readFile(configFile, 'utf8');
-  const match = avdConfig.match(/^image\.sysdir\.1=(.+)$/m);
-  const actual = match ? match[1].trim().replace(/\\/g, '/').replace(/\/+$/, '') : '';
-  const expected = image.relativePath.replace(/\\/g, '/');
+  const actual = parseAvdSystemImagePath(avdConfig);
+  const expected = image.relativePath.replace(/\\\\/g, '/');
   if (!actual || !actual.endsWith(expected)) {
     throw new Error('Existing AVD ' + meta.avdName + ' was created from a different Android system image. Back up its data and provision a new device to change image targets.');
   }
