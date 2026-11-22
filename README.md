@@ -86,6 +86,20 @@ Run it from **Actions → Android Emulator Smoke (Free macOS) → Run workflow**
 
 This is an automated CI test, **not** an always-on cloud phone or a public streaming service. Standard GitHub-hosted runners are free for public repositories; see [GitHub Actions billing](https://docs.github.com/en/actions/concepts/billing-and-usage). The distinction between the temporary test emulator, private ADB bridge and a future persistent device host is documented in [the free-first Android plan](docs/FREE_FIRST_ANDROID_PLAN.md).
 
+## Free physical Samsung, OPPO and Xiaomi testing
+
+Before using the metered Google Developer Device Platform path, use Firebase Android Device Streaming on a Firebase **Spark (no-cost) project**. Google currently includes **30 streaming minutes per project per month** on Spark. Android Studio's remote-device catalog includes partner labs operated by Samsung, OPPO, Xiaomi and other manufacturers; the exact handset and Android version depend on live availability in the catalog.
+
+1. Use an authorised Google account and a Firebase project on the Spark plan. Spark does not require a payment method for its no-cost features; do not link a billing account or upgrade to Blaze for this test.
+2. In Android Studio, open **View → Tool Windows → Device Manager → Select Remote Devices**.
+3. Filter the catalog to Partner Device Labs, select an available Samsung, OPPO or Xiaomi phone, and connect.
+4. Use the short session to check the genuine OEM firmware, screen layout and app behaviour.
+5. Finish with **Return and Erase Device** so the lab phone is wiped and returned.
+
+The 30-minute allowance is shared across the Firebase project and is not a permanent GRIXDroid worker. This is a manual developer test, not a customer-facing cloud session and not an ADB/WebRTC integration. The existing GRIXDroid USB ADB worker does not accept this remote transport. See [the free Firebase and OEM-device runbook](docs/GOOGLE_DEVICE_PLATFORM.md#free-first-manual-testing-through-firebase-spark) for the current limits and boundaries.
+
+Firebase Test Lab also has a Spark quota of 5 physical-device test runs and 10 virtual-device test runs per day, but it runs APK tests rather than providing a continuous interactive phone. See [Test Lab quotas](https://firebase.google.com/docs/test-lab/usage-quotas-pricing).
+
 ## Genuine Samsung, OPPO and Xiaomi hardware
 
 The device catalogue includes real OEM phones hosted by Google's Developer Device Platform. GRIXDroid now has an operator-run, billing-gated preflight to reserve a supported physical model, verify its live Android build identity over ADB, and release the reservation. This is a hardware access test only; it does not yet enrol DDP devices into customer sessions. See [the Google physical-device preflight runbook](docs/GOOGLE_DEVICE_PLATFORM.md) for the supported device list, costs, setup and remaining integration work.
