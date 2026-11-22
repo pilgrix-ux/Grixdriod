@@ -1,4 +1,5 @@
 import './workspace-experience.css';
+import './workspace-polish.css';
 
 type StoredSession = {
   access_token: string;
