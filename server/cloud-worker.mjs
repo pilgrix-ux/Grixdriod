@@ -180,6 +180,7 @@ export function getWorkerConfig(env = process.env) {
     capacity,
     pollMs: Math.max(1500, Math.min(30000, Number(env.GRIXDROID_POLL_MS) || 5000)),
     actionPollMs: Math.max(100, Math.min(2000, Number(env.GRIXDROID_ACTION_POLL_MS) || 350)),
+    sessionLeaseMs: Math.max(60000, Math.min(300000, Number(env.GRIXDROID_SESSION_LEASE_MS) || 120000)),
     bootTimeoutMs: Math.max(120000, Math.min(1200000, Number(env.GRIXDROID_BOOT_TIMEOUT_MS) || 600000)),
     workerId: env.GRIXDROID_WORKER_ID || '',
     workerLabel: env.GRIXDROID_WORKER_LABEL || os.hostname(),
@@ -279,6 +280,81 @@ async function callRpc(config, name, args) {
   if (!response.ok) throw new Error('Control plane ' + name + ' failed (' + response.status + '): ' + text.slice(0, 400));
   if (!text) return null;
   try { return JSON.parse(text); } catch { return text; }
+}
+
+async function callTable(config, table, query = '', options = {}) {
+  const response = await fetch(config.controlUrl + '/rest/v1/' + table + query, {
+    method: options.method || 'GET',
+    headers: {
+      apikey: config.apiKey,
+      Authorization: 'Bearer ' + config.serviceRoleJwt,
+      'Content-Type': 'application/json',
+      ...(options.prefer ? { Prefer: options.prefer } : {}),
+    },
+    ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+    signal: AbortSignal.timeout(20000),
+    cache: 'no-store',
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error('Control plane table ' + table + ' failed (' + response.status + '): ' + text.slice(0, 300));
+  if (!text) return null;
+  try { return JSON.parse(text); } catch { return text; }
+}
+
+async function resolveDeviceOwner(config, meta) {
+  if (meta.userId && UUID_RE.test(meta.userId)) return meta.userId;
+  const rows = await callTable(config, 'cloud_devices',
+    '?select=user_id&id=eq.' + encodeURIComponent(meta.cloudDeviceId) + '&limit=1');
+  const userId = Array.isArray(rows) ? rows[0]?.user_id : null;
+  if (!UUID_RE.test(userId || '')) throw new Error('Could not resolve the owner of the restored cloud device.');
+  meta.userId = userId;
+  return userId;
+}
+
+async function createDeviceSession(config, meta) {
+  const userId = await resolveDeviceOwner(config, meta);
+  const now = new Date();
+  const rows = await callTable(config, 'cloud_device_sessions', '', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: [{
+      user_id: userId,
+      device_id: meta.cloudDeviceId,
+      state: 'connected',
+      started_at: now.toISOString(),
+      last_seen_at: now.toISOString(),
+      expires_at: new Date(now.getTime() + config.sessionLeaseMs).toISOString(),
+    }],
+  });
+  const row = Array.isArray(rows) ? rows[0] : null;
+  if (!row || !UUID_RE.test(row.id || '')) throw new Error('Supabase did not create an owner-scoped Android session.');
+  meta.sessionId = row.id;
+  meta.lastSessionHeartbeatAt = Date.now();
+}
+
+async function touchDeviceSession(config, meta) {
+  if (!meta.sessionId) return createDeviceSession(config, meta);
+  const now = new Date();
+  await callTable(config, 'cloud_device_sessions', '?id=eq.' + encodeURIComponent(meta.sessionId), {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: {
+      state: 'connected',
+      last_seen_at: now.toISOString(),
+      expires_at: new Date(now.getTime() + config.sessionLeaseMs).toISOString(),
+    },
+  });
+  meta.lastSessionHeartbeatAt = Date.now();
+}
+
+async function finishDeviceSession(config, meta, state = 'expired') {
+  if (!meta.sessionId) return;
+  const now = new Date().toISOString();
+  await callTable(config, 'cloud_device_sessions', '?id=eq.' + encodeURIComponent(meta.sessionId), {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: { state, last_seen_at: now, expires_at: now },
+  }).catch(() => {});
 }
 
 function profileSettings(profile) {
@@ -546,6 +622,9 @@ async function persistMeta(meta) {
   const disk = {
     cloudDeviceId: meta.cloudDeviceId,
     requestId: meta.requestId,
+    userId: meta.userId || null,
+    sessionId: meta.sessionId || null,
+    lastSessionHeartbeatAt: meta.lastSessionHeartbeatAt || null,
     name: meta.name,
     profile: meta.profile,
     systemImage: meta.systemImage || config.systemImage,
@@ -583,7 +662,9 @@ async function startExisting(config, meta) {
       p_android_release: meta.androidRelease,
       p_storage_bytes: null,
     });
+    await touchDeviceSession(config, meta);
     await startWebRTCStream(config, meta);
+    await persistMeta(meta);
     return;
   }
   spawnEmulator(config, meta);
@@ -598,12 +679,15 @@ async function startExisting(config, meta) {
     p_android_release: meta.androidRelease,
     p_storage_bytes: null,
   });
+  await touchDeviceSession(config, meta);
   await startWebRTCStream(config, meta);
+  await persistMeta(meta);
 }
 
 async function stopDevice(config, meta) {
   if (meta.state === 'stopped') return;
   await stopWebRTCStream(config, meta);
+  await finishDeviceSession(config, meta, 'expired');
   meta.expectedStop = true;
   await adb(config, meta.serial, ['emu', 'kill'], { timeout: 10000 }).catch(() => {
     if (meta.process && meta.process.exitCode === null) meta.process.kill('SIGTERM');
@@ -758,6 +842,9 @@ async function loadPersistedDevices(config, instances) {
       if (!UUID_RE.test(saved.cloudDeviceId) || !UUID_RE.test(saved.requestId) || !Number.isInteger(saved.port)) continue;
       const meta = {
         ...saved,
+        userId: saved.userId || null,
+        sessionId: saved.sessionId || null,
+        lastSessionHeartbeatAt: saved.lastSessionHeartbeatAt || 0,
         deviceDir,
         process: null,
         expectedStop: false,
@@ -771,8 +858,11 @@ async function loadPersistedDevices(config, instances) {
         if (boot) {
           Object.assign(meta, boot);
           meta.state = 'running';
+          await touchDeviceSession(config, meta);
+          await persistMeta(meta);
         }
       } else {
+        await finishDeviceSession(config, meta, 'expired');
         await callRpc(config, 'grixdroid_set_device_state', {
           p_device_id: meta.cloudDeviceId,
           p_worker_id: config.workerId,
@@ -813,6 +903,9 @@ async function bootClaim(config, claim, instances) {
       requestId,
       cloudDeviceId: '',
       name: claim.device_name,
+      userId: claim.user_id,
+      sessionId: null,
+      lastSessionHeartbeatAt: 0,
       profile: claim.profile,
       systemImage: (config.systemImages.find((image) => image.androidVersion === String(claim.android_version)) || {}).package,
       deviceModelId: String(claim.device_model || ''),
@@ -849,6 +942,7 @@ async function bootClaim(config, claim, instances) {
     if (!UUID_RE.test(normalizedId)) throw new Error('Control plane did not return a valid cloud device id.');
     meta.cloudDeviceId = normalizedId;
     meta.state = 'running';
+    await createDeviceSession(config, meta);
     await persistMeta(meta);
     instances.set(meta.cloudDeviceId, meta);
     try {
@@ -1051,10 +1145,21 @@ export async function startCloudWorker(config = getWorkerConfig()) {
   }, config.actionPollMs);
   actionTimer.unref();
 
+  const sessionTimer = setInterval(() => {
+    for (const meta of instances.values()) {
+      if (meta.state !== 'running' || !meta.sessionId || Date.now() - (meta.lastSessionHeartbeatAt || 0) < 30000) continue;
+      void touchDeviceSession(config, meta)
+        .then(() => persistMeta(meta))
+        .catch((error) => process.stderr.write('[worker] Session lease renewal failed: ' + error.message + '\n'));
+    }
+  }, 10000);
+  sessionTimer.unref();
+
   const shutdown = async () => {
     if (stopping) return;
     stopping = true;
     clearInterval(actionTimer);
+    clearInterval(sessionTimer);
     server.close();
     process.stdout.write('[worker] Worker API stopped. Android devices and persistent volumes were left intact.\n');
   };
